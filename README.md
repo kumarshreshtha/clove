@@ -1,2 +1,3 @@
-# yaad
-YAAD is Yet Another Automatic Differentiation engine with support for forward and bacward mode autodiff on scalars, inspired by micrograd.
+# Yet Another Autodiff (YAAD)
+
+YAAD is yet another automatic differentiation engine inspired by [micrograd](https://github.com/karpathy/micrograd). It supports backward-mode and forward-mode autodiff on a DAG of scalars.
