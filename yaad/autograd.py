@@ -28,8 +28,8 @@ def backward(output: node.Node,
              create_graph=False):
     grad_output = (node.Node(1., requires_grad=create_graph)
                    if grad_output is None else grad_output)
-    output.op.grad_store = grad_output
-    ordered_ops = reversed(topological_order(output.op))
+    output.op.grad_store.update(grad_output)
+    ordered_ops = topological_order(output.op)
     autodiff(ordered_ops, retain_graph, accumulate_grad=True)
 
 

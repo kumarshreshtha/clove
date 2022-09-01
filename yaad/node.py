@@ -18,14 +18,12 @@ class Node:
     def __init__(self,
                  data,
                  requires_grad=False,
-                 name: str = None,
-                 *,
-                 _op: Optional[ops.Operator] = None):
+                 name: str = None):
         self._data = data
         self._grad = None
         self.requires_grad = requires_grad
         self.name = name
-        self.op = _op
+        self.op = None
         self._retains_grad = False
 
     @property
@@ -47,6 +45,10 @@ class Node:
                 "gradient attribute of non-leaf nodes are not"
                 " stored unless `retain_grad` has been explicitly set.")
         return self._grad
+
+    @grad.setter
+    def grad(self, value):
+        self._grad = value
 
     @property
     def retains_grad(self):

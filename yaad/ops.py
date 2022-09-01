@@ -24,28 +24,30 @@ def prop_grad(inp):
     return isinstance(inp, node.Node) and inp.requires_grad
 
 
+# TODO: fix this, adding an initial value triggers a circular import
+# also think of higher order graphs when maintaining these grad store values.
 @dataclasses.dataclass
 class GradStore:
-    value: float = 0.
+    value: node.Node = None
 
     def reset(self):
-        self.value = 0.
+        self.value = node.Node(0.)
 
-    def update(self, grad):
-        self.value = self.value + grad
+    def update(self, grad: node.Node):
+        self.value.data = self.value.data + grad.data
 
 
 class Operator(abc.ABC):
-    compute_grad = False
+    compute_grad = True
 
     def __init__(self,
-                 variable: node.Node,
-                 _children: Sequence[Operator] = (),
-                 requires_grad: bool = False):
+                 children: Sequence[Operator] = (),
+                 requires_grad: bool = False,
+                 variable: node.Node = None):
         self._cache = {}
-        self._children = tuple(_children)
+        self._children = tuple(children)
         self.requires_grad = requires_grad
-        self._var_ref = weakref.ref(variable)
+        self._var_ref = weakref.ref(variable) if variable is not None else None
         self.grad_store = GradStore()
 
     def __init_subclass__(cls, symbol: Optional[str] = None) -> None:
@@ -60,7 +62,11 @@ class Operator(abc.ABC):
 
     @property
     def variable(self):
-        return self._var_ref()
+        return self._var_ref() if self._var_ref is not None else None
+
+    @variable.setter
+    def variable(self, value):
+        self._var_ref = weakref.ref(value)
 
     @abc.abstractmethod
     def forward(self, *args, out: node.Node):
@@ -77,36 +83,41 @@ class Operator(abc.ABC):
         if requires_grad:
             for arg in args:
                 if prop_grad(arg):
-                    op = LeafOp(arg) if arg._op is None else arg._op
+                    op = LeafOp(arg) if arg.op is None else arg.op
                     children.append(op)
                 else:
                     children.append(None)
             requires_grad = any([child is not None for child in children])
+        # TODO: We can have a better design for variable and op relation.
         op = cls(children=children if requires_grad else [],
                  requires_grad=requires_grad)
-        out = node.Node(data=None,
-                        requires_grad=requires_grad,
-                        _op=op if requires_grad else None)
         # ops have their own backward. therefore the operations they do within
         #  their forward should be detached from the computation graph.
         with disable_grad():
-            op.forward(*args, out=out)
+            out = op.forward(*args)
+        out.requires_grad = requires_grad
+        out.op = op if requires_grad else None
+        op.variable = out
         return out
 
     def save_for_backward(self, name, value):
-        # TODO: maybe should save a copy of the Node?
-        # if it is mutated inplace after that could lead to problems.
         if self.requires_grad:
             self._cache[name] = value
 
     def saved_value(self, name):
         return self._cache.get(name, None)
 
+    # def __repr__(self):
+    #     op_repr = f"Operator({self.__class__.__name__}[{self.symbol}])"
+    #     var = self.variable
+    #     var_repr = if var is not None
+
 
 class LeafOp(Operator, symbol="leaf"):
 
     def __init__(self, variable):
-        super().__init__(variable, requires_grad=variable.requires_grad)
+        super().__init__(variable=variable,
+                         requires_grad=variable.requires_grad)
         self.symbol = (
             variable.name if variable.name is not None else self.symbol)
 
@@ -118,8 +129,8 @@ class LeafOp(Operator, symbol="leaf"):
 
 
 class CloneOp(Operator):
-    def forward(self, inp: node.Node, out: node.Node):
-        out.data = inp.data
+    def forward(self, inp: node.Node):
+        return node.Node(inp.data)
 
     def backward(self, grad_output: node.Node):
         return grad_output
@@ -130,9 +141,8 @@ class CloneOp(Operator):
 class AddOp(Operator, symbol="+"):
     def forward(self,
                 inp: node.Node,
-                other: node.Node,
-                out: node.Node):
-        out.data = inp.data + other.data
+                other: node.Node):
+        return node.Node(inp.data + other.data)
 
     def backward(self, grad_output: Optional[node.Node]):
         if grad_output is None:
@@ -143,16 +153,12 @@ class AddOp(Operator, symbol="+"):
 class MulOp(Operator, symbol="*"):
     def forward(self,
                 inp: node.Node,
-                other: node.Node,
-                out: node.Node):
-        if not out.requires_grad:
-            out.data = inp.data * other.data
-            return
+                other: node.Node):
         if inp.requires_grad:
             self.save_for_backward("other", inp)
         if other.requires_grad:
             self.save_for_backward("inp", other)
-        out.data = inp.data * other.data
+        return node.Node(inp.data * other.data)
 
     def backward(self, grad_output: node.Node):
         # reusing the forward definition allows for higher order derivatives.
@@ -160,6 +166,7 @@ class MulOp(Operator, symbol="*"):
         inp = self.saved_value("inp")
         grad_inp = other * grad_output if other is not None else None
         grad_other = inp * grad_output if inp is not None else None
+        self._cache.clear()
         return grad_inp, grad_other
 
 
