@@ -24,17 +24,17 @@ def prop_grad(inp):
     return isinstance(inp, node.Node) and inp.requires_grad
 
 
-# TODO: fix this, adding an initial value triggers a circular import
-# also think of higher order graphs when maintaining these grad store values.
 @dataclasses.dataclass
 class GradStore:
-    value: node.Node = None
+    value: node.Node = dataclasses.field(default_factory=lambda: node.Node(0.))
 
     def reset(self):
         self.value = node.Node(0.)
 
     def update(self, grad: node.Node):
-        self.value.data = self.value.data + grad.data
+        # Note: if incoming grad requires grad then this value becomes part
+        # of the graph thus making higher order derivatives possible.
+        self.value = self.value + grad
 
 
 class Operator(abc.ABC):
@@ -56,9 +56,6 @@ class Operator(abc.ABC):
     @property
     def next_ops(self):
         return self._children
-
-    def delete_edges(self):
-        self._children = tuple()
 
     @property
     def variable(self):
@@ -99,6 +96,9 @@ class Operator(abc.ABC):
         out.op = op if requires_grad else None
         op.variable = out
         return out
+
+    def clear_cache(self):
+        self._cache.clear()
 
     def save_for_backward(self, name, value):
         if self.requires_grad:
@@ -155,18 +155,20 @@ class MulOp(Operator, symbol="*"):
                 inp: node.Node,
                 other: node.Node):
         if inp.requires_grad:
-            self.save_for_backward("other", inp)
+            self.save_for_backward("other", other)
         if other.requires_grad:
-            self.save_for_backward("inp", other)
+            self.save_for_backward("inp", inp)
         return node.Node(inp.data * other.data)
 
+    # TODO: saved_value can be used to determine if a second backward is being performed
+    # on the same graph without retain grad. cannot rely on None returns anymore for normal
+    # behavior.
     def backward(self, grad_output: node.Node):
         # reusing the forward definition allows for higher order derivatives.
         other = self.saved_value("other")
         inp = self.saved_value("inp")
         grad_inp = other * grad_output if other is not None else None
         grad_other = inp * grad_output if inp is not None else None
-        self._cache.clear()
         return grad_inp, grad_other
 
 

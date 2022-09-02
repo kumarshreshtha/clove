@@ -11,7 +11,13 @@ NODE_ATTR = dict(align="left",
                  style="filled",
                  color="black")
 
-OP = dict(NODE_ATTR, shape="circle", fillcolor="dimgray", fontcolor="white")
+OP = dict(NODE_ATTR,
+          shape="circle",
+          fillcolor="dimgray",
+          fontcolor="white",
+          width="0.5",
+          hieght="0.5",
+          fixedsize="true")
 OP_CACHE = dict(NODE_ATTR, shape="record", fillcolor="orange")
 LEAF = dict(NODE_ATTR, shape="record", fillcolor="lightblue")
 HIDDEN = dict(NODE_ATTR, shape="record", fillcolor="lightpink")
@@ -28,13 +34,11 @@ def id_repr(data):
 
 
 def make_data_node(dot, data: node.Node, is_leaf: bool):
-    dot.node(id_repr(data),
-             f"name:{data.name}|data:{data.data}|grad:{data.grad}",
-             **(LEAF if is_leaf else HIDDEN))
+    dot.node(id_repr(data), str(data), **(LEAF if is_leaf else HIDDEN))
 
 
 def make_out_node(dot, out: node.Node):
-    dot.node(id_repr(out), f"name:{out.name}|data:{out.data}", **OUT)
+    dot.node(id_repr(out), str(out), **OUT)
 
 
 def make_op_node(dot, op: ops.Operator):
@@ -57,7 +61,7 @@ def make_nodes(dot: graphviz.Digraph, root_op: ops.Operator, _visited=None):
         make_nodes(dot, child)
     if isinstance(root_op, ops.LeafOp):
         make_data_node(dot, root_op.variable, is_leaf=True)
-        dot.edge(id_repr(root_op.variable), id_repr(root_op))
+        dot.edge(id_repr(root_op.variable), id_repr(root_op), dir="none")
 
 
 def make_dot(root: node.Node):

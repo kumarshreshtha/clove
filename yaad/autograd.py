@@ -41,18 +41,20 @@ def autodiff(ordered_ops: List[ops.Operator],
              retain_graph: bool,
              accumulate_grad=True):
     op = ordered_ops.pop()
-    output = op.variable
     grad_output = op.grad_store.value
     op.grad_store.reset()
+    output = op.variable
     if (accumulate_grad
             and output is not None
             and (output.is_leaf() or output.retains_grad)):
         output.grad = (grad_output if output.grad is None
                        else output.grad + grad_output)
     grads = op.backward(grad_output)
+    grads = (grads,) if isinstance(grads, node.Node) else grads
     for child, grad in zip(op.next_ops, grads):
         if child is not None:
             child.grad_store.update(grad)
     if not retain_graph:
-        op.delete_edges()
-    autodiff(ordered_ops, retain_graph, accumulate_grad)
+        op.clear_cache()
+    if ordered_ops:
+        autodiff(ordered_ops, retain_graph, accumulate_grad)

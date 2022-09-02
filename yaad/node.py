@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 import warnings
 
 from yaad import autograd
@@ -23,7 +23,7 @@ class Node:
         self._grad = None
         self.requires_grad = requires_grad
         self.name = name
-        self.op = None
+        self.op: Optional[ops.Operator] = None
         self._retains_grad = False
 
     @property
@@ -40,7 +40,7 @@ class Node:
 
     @property
     def grad(self):
-        if not self.is_leaf() and not self.retain_grad:
+        if not self.is_leaf() and not self.retains_grad:
             warnings.warn(
                 "gradient attribute of non-leaf nodes are not"
                 " stored unless `retain_grad` has been explicitly set.")
@@ -70,8 +70,10 @@ class Node:
 
     def __repr__(self):
         data_repr = f"data={self.data}"
-        grad_repr = f", grad={self.grad}"
-        return f"Node({data_repr}{grad_repr if self.requires_grad else ''})"
+        grad_repr = (f", grad={self.grad}" if self.requires_grad
+                     and (self.is_leaf() or self.retains_grad)
+                     else "")
+        return f"Node({data_repr}{grad_repr})"
 
     def __add__(self, other):
         return ops.add(self, other)
