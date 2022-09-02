@@ -62,11 +62,9 @@ class Node:
     def is_leaf(self):
         return self.op is None
 
-    def backward(self, _grad_output=None):
+    def backward(self, grad_output=None):
         # TODO: add retain_graph and create graph
-        # TODO: maybe changing the requires_grad here is all we need for higher
-        # order derivatives.
-        autograd.backward(self, _grad_output)
+        autograd.backward(self, grad_output)
 
     def __repr__(self):
         data_repr = f"data={self.data}"

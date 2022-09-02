@@ -4,6 +4,7 @@ from typing import List, Optional, Sequence
 
 from yaad import ops
 from yaad import node
+from yaad import grad_mode
 
 
 def topological_order(root: Optional[ops.Operator],
@@ -21,16 +22,20 @@ def topological_order(root: Optional[ops.Operator],
     _order.append(root)
     return _order
 
+# TODO: remove create_graph from here and add it exclusively to grad (with
+# default = True maybe?)
+
 
 def backward(output: node.Node,
              grad_output=None,
              retain_graph=False,
              create_graph=False):
-    grad_output = (node.Node(1., requires_grad=create_graph)
-                   if grad_output is None else grad_output)
-    output.op.grad_store.update(grad_output)
-    ordered_ops = topological_order(output.op)
-    autodiff(ordered_ops, retain_graph, accumulate_grad=True)
+    with grad_mode.set_grad_enabled(create_graph):
+        grad_output = (node.Node(1., requires_grad=create_graph)
+                       if grad_output is None else grad_output)
+        output.op.grad_store.update(grad_output)
+        ordered_ops = topological_order(output.op)
+        autodiff(ordered_ops, retain_graph, accumulate_grad=True)
 
 
 def grad():

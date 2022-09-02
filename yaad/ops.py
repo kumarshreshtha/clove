@@ -1,23 +1,14 @@
 from __future__ import annotations
 
 import abc
-import contextlib
 import dataclasses
 from typing import Optional, Sequence, Union
 import weakref
 
 from yaad import node
+from yaad import grad_mode
 
 Number = Union[int, float]
-
-
-@contextlib.contextmanager
-def disable_grad():
-    try:
-        Operator.compute_grad = False
-        yield
-    finally:
-        Operator.compute_grad = True
 
 
 def prop_grad(inp):
@@ -38,7 +29,6 @@ class GradStore:
 
 
 class Operator(abc.ABC):
-    compute_grad = True
 
     def __init__(self,
                  children: Sequence[Operator] = (),
@@ -76,7 +66,7 @@ class Operator(abc.ABC):
     @classmethod
     def apply(cls, *args):
         children = []
-        requires_grad = cls.compute_grad
+        requires_grad = grad_mode.is_grad_enabled()
         if requires_grad:
             for arg in args:
                 if prop_grad(arg):
@@ -90,7 +80,7 @@ class Operator(abc.ABC):
                  requires_grad=requires_grad)
         # ops have their own backward. therefore the operations they do within
         #  their forward should be detached from the computation graph.
-        with disable_grad():
+        with grad_mode.set_grad_enabled(False):
             out = op.forward(*args)
         out.requires_grad = requires_grad
         out.op = op if requires_grad else None
