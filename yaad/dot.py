@@ -47,7 +47,11 @@ def make_op_node(dot, op: ops.Operator):
 # TODO: implement show cache feature later.
 
 
-def make_nodes(dot: graphviz.Digraph, root_op: ops.Operator, _visited=None):
+def make_nodes(dot: graphviz.Digraph,
+               root_op: ops.Operator,
+               _is_out=True,
+               _visited=None,
+               ):
     _visited = set() if _visited is None else _visited
     if root_op in _visited:
         return
@@ -58,9 +62,11 @@ def make_nodes(dot: graphviz.Digraph, root_op: ops.Operator, _visited=None):
         if child not in _visited:
             make_op_node(dot, child)
         dot.edge(id_repr(child), id_repr(root_op))
-        make_nodes(dot, child)
-    if isinstance(root_op, ops.LeafOp):
-        make_data_node(dot, root_op.variable, is_leaf=True)
+        make_nodes(dot, child, _is_out=False, _visited=_visited)
+    if not _is_out and root_op.variable is not None:
+        make_data_node(dot,
+                       root_op.variable,
+                       is_leaf=isinstance(root_op, ops.LeafOp))
         dot.edge(id_repr(root_op.variable), id_repr(root_op), dir="none")
 
 
