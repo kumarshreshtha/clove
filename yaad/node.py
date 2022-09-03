@@ -66,13 +66,6 @@ class Node:
         # TODO: add retain_graph and create graph
         autograd.backward(self, grad_output)
 
-    def __repr__(self):
-        data_repr = f"data={self.data}"
-        grad_repr = (f", grad={self.grad}" if self.requires_grad
-                     and (self.is_leaf() or self.retains_grad)
-                     else "")
-        return f"Node({data_repr}{grad_repr})"
-
     def __add__(self, other):
         return ops.add(self, other)
 
@@ -84,3 +77,12 @@ class Node:
         # self.requires_grad, self.is_leaf, if leaf and non None grad then
         # grad.
         ...
+
+    def __repr__(self):
+        # TODO: we need better repr, add requires grad in repr.
+        # and maybe use describe to populate node.
+        # grad_repr = (f", grad={self.grad}" if self.requires_grad
+        #              and (self.is_leaf() or self.retains_grad)
+        #              else "")
+        grad_repr = f", requires_grad=True" if self.requires_grad else ""
+        return f"Node({self.data}{grad_repr})"
