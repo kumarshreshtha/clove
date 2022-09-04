@@ -23,8 +23,8 @@ class GradStore:
         self.value = node.Node(0.)
 
     def update(self, grad: node.Node):
-        # Note: if incoming grad requires grad then this value becomes part
-        # of the graph thus making higher order derivatives possible.
+        # Note: if incoming grad has requires_grad=True then this value becomes
+        # part of the graph thus making higher order derivatives possible.
         self.value = self.value + grad
 
 
@@ -56,7 +56,7 @@ class Operator(abc.ABC):
         self._var_ref = weakref.ref(value)
 
     @abc.abstractmethod
-    def forward(self, *args, out: node.Node):
+    def forward(self, *args):
         raise NotImplementedError
 
     @abc.abstractmethod

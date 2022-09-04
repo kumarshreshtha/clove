@@ -8,10 +8,6 @@ import warnings
 from yaad import autograd
 from yaad import ops
 
-
-# TODO: add zero grad.
-
-
 class Node:
     """Scalar Node."""
 
@@ -62,9 +58,11 @@ class Node:
     def is_leaf(self):
         return self.op is None
 
-    def backward(self, grad_output=None):
-        # TODO: add retain_graph and create graph
-        autograd.backward(self, grad_output)
+    def backward(self, grad_output=None, retain_graph=False):
+        autograd.backward(self, grad_output, retain_graph)
+
+    def zero_grad(self, set_to_none: bool = False):
+        self._grad = None if set_to_none else 0.
 
     def __add__(self, other):
         return ops.add(self, other)
@@ -79,8 +77,5 @@ class Node:
         ...
 
     def __repr__(self):
-        # grad_repr = (f", grad={self.grad}" if self.requires_grad
-        #              and (self.is_leaf() or self.retains_grad)
-        #              else "")
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
         return f"Node({self.data}{grad_repr})"

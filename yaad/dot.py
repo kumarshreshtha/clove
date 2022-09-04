@@ -36,7 +36,7 @@ def make_data_node(dot, data: node.Node, is_leaf: bool, show_grad: bool):
     data_repr = str(data)
     grad_repr = str(data.grad)
     width = max(len(data_repr), len(grad_repr))
-    n_repr = f"data : {data_repr.ljust(width)}\ngrad : {grad_repr.ljust(width)}"
+    n_repr = f"data : {data_repr.rjust(width)}\ngrad : {grad_repr.rjust(width)}"
     dot.node(id_repr(data), n_repr, **(LEAF if is_leaf else HIDDEN))
 
 
