@@ -73,6 +73,7 @@ def make_nodes(dot: graphviz.Digraph,
     _visited = set() if _visited is None else _visited
     if root_op in _visited:
         return
+    _visited.add(root_op)
     make_op_node(dot, root_op)
     for child in root_op.next_ops:
         if child is None:
