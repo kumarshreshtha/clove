@@ -79,8 +79,6 @@ class Node:
         ...
 
     def __repr__(self):
-        # TODO: we need better repr, add requires grad in repr.
-        # and maybe use describe to populate node.
         # grad_repr = (f", grad={self.grad}" if self.requires_grad
         #              and (self.is_leaf() or self.retains_grad)
         #              else "")

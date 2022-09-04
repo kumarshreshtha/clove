@@ -75,7 +75,6 @@ class Operator(abc.ABC):
                 else:
                     children.append(None)
             requires_grad = any([child is not None for child in children])
-        # TODO: We can have a better design for variable and op relation.
         op = cls(children=children if requires_grad else [],
                  requires_grad=requires_grad)
         # ops have their own backward. therefore the operations they do within

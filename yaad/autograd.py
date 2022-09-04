@@ -25,6 +25,12 @@ def topological_order(root: Optional[ops.Operator],
 # TODO: remove create_graph from here and add it exclusively to grad (with
 # default = True maybe?)
 
+# TODO: What to do when there is no path from output to input? zero or none?
+# torch throws an error.
+# When you know the outputs and the inputs, you don't need to traverse the full
+# graph? find all paths from out to in and mark nodes. then only traverse
+# those nodes.
+
 
 def backward(output: node.Node,
              grad_output=None,
