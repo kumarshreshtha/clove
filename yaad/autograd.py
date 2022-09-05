@@ -96,7 +96,7 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
                 populate_grad=False,
                 inputs=inputs,
                 grad_map=grad_map)
-    return grad_map.values()
+    return tuple(grad_map.values())
 
 
 def autodiff(ordered_ops: List[ops.Operator],
@@ -119,7 +119,7 @@ def autodiff(ordered_ops: List[ops.Operator],
             and (output.is_leaf() or output.retains_grad)):
         output.grad = (grad_output if output.grad is None
                        else output.grad + grad_output)
-    elif output.is_leaf() and output in grad_map:
+    elif output is not None and output.is_leaf() and output in grad_map:
         grad_map[output] = (grad_output if grad_map[output] is None
                             else grad_map[output] + grad_output)
     grads = op.backward(grad_output)
