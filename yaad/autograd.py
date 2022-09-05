@@ -11,15 +11,15 @@ def topological_order(root: Optional[ops.Operator],
                       required_ops: Optional[Set[ops.Operator]],
                       _order=None,
                       _visited=None) -> List[ops.Operator]:
-    if root is None or (required_ops is not None and root not in required_ops):
-        return _order
     _visited = set() if _visited is None else _visited
     _order = [] if _order is None else _order
+    if root is None or (required_ops is not None and root not in required_ops):
+        return _order
     if root in _visited:
         return _order
     _visited.add(root)
     for op in root._children:
-        _order = topological_order(op, _order, _visited)
+        _order = topological_order(op, required_ops, _order, _visited)
     _order.append(root)
     return _order
 
@@ -84,17 +84,18 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
                                if g_out is None else g_out)
             out.op.grad_store.update(grad_outputs[i])
         required_ops = prune_graph(inputs, outputs)
-        grad_map = {}
+        grad_map = None
         for out in outputs:
             # TODO: these multiple calls to topo_order can be optimized.
             # by sending in visited and order. but need to weed out
             # ops that are not part of this graph.
             ordered_ops = topological_order(out.op, required_ops)
-            autodiff(ordered_ops,
-                     retain_graph=retain_graph if out is outputs[-1] else True,
-                     populate_grad=False,
-                     inputs=inputs,
-                     grad_map=grad_map)
+            grad_map = autodiff(
+                ordered_ops,
+                retain_graph=retain_graph if out is outputs[-1] else True,
+                populate_grad=False,
+                inputs=inputs,
+                grad_map=grad_map)
     return grad_map.values()
 
 
