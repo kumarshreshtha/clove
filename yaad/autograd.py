@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-from typing import List, Optional, Sequence, Set, Union
+from typing import Dict, List, Optional, Sequence, Set, Union
 
 from yaad import ops
 from yaad import node
@@ -28,30 +28,28 @@ def prune_graph(inputs: Sequence[node.Node], outputs: Sequence[node.Node]):
     def select_nodes(root: ops.Operator,
                      inputs: Sequence[node.Node],
                      _visited: Optional[Set] = None,
-                     _required: Optional[Set] = None) -> bool:
+                     _selected: Optional[Set] = None) -> bool:
         _visited = set() if _visited is None else _visited
-        _required = set() if _required is None else _required
+        _selected = set() if _selected is None else _selected
         if root is None:
-            return _required
+            return _selected
         _visited.add(root)
         if isinstance(root, ops.LeafOp) and root.variable in inputs:
-            _required.add(root)
-            return _required
+            _selected.add(root)
+            return _selected
         for child in root.next_ops:
-            _required = select_nodes(child, inputs, _visited, _required)
-            if child in _required:
-                _required.add(root)
-        return _required
-    required = set()
+            _selected = select_nodes(child, inputs, _visited, _selected)
+            if child in _selected:
+                _selected.add(root)
+        return _selected
+    selected = set()
     visited = set()
     for output in outputs:
-        required = select_nodes(output.op, inputs, visited, required)
+        selected = select_nodes(output.op, inputs, visited, selected)
+    return selected
 
 # TODO: What to do when there is no path from output to input? zero or none?
 # torch throws an error.
-# When you know the outputs and the inputs, you don't need to traverse the full
-# graph? find all paths from out to in and mark nodes. then only traverse
-# those nodes.
 
 
 def backward(output: node.Node,
@@ -62,9 +60,7 @@ def backward(output: node.Node,
                        if grad_output is None else grad_output)
         output.op.grad_store.update(grad_output)
         ordered_ops = topological_order(output.op)
-        autodiff(ordered_ops, retain_graph, accumulate_grad=True)
-
-# TODO: finish implementing the grad function.
+        autodiff(ordered_ops, retain_graph, populate_grad=True)
 
 
 def grad(outputs: Union[node.Node, Sequence[node.Node]],
@@ -74,40 +70,57 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
          create_graph: bool = False):
     inputs = [inputs] if isinstance(inputs, node.Node) else inputs
     outputs = [outputs] if isinstance(outputs, node.Node) else outputs
-    grad_outputs = (
-        [grad_outputs] if isinstance(grad_outputs, node.Node) else grad_outputs)
+    grad_outputs = ([grad_outputs]
+                    if isinstance(grad_outputs, node.Node)
+                    else [None] * len(outputs) if grad_outputs is None
+                    else grad_outputs)
+    if not len(grad_outputs) == len(outputs):
+        raise ValueError(
+            "Expected grad outputs to be the same length as outputs. Found"
+            f" lengths {len(grad_outputs)} and {len(outputs)} instead. ")
     with grad_mode.set_grad_enabled(create_graph):
-        # TODO: loop over all grad outs.
-        grad_output = (node.Node(1., requires_grad=create_graph)
-                       if grad_output is None else grad_output)
+        for i, (out, g_out) in enumerate(zip(outputs, grad_outputs)):
+            grad_outputs[i] = (node.Node(1., requires_grad=create_graph)
+                               if g_out is None else g_out)
+            out.op.grad_store.update(grad_outputs[i])
         required_ops = prune_graph(inputs, outputs)
-        # TODO: loop over all outputs
-        outputs.op.grad_store.update(grad_output)
-        # TODO: loop over all outputs
-        ordered_ops = topological_order(outputs.op, required_ops)
-        # TODO: loop over all outputs ?
-        # what happens when 2 outputs share a subgraph?
-        # set retain graph to true for all but last call?
-        # autodiff should accept inputs and return grads.
-        # grads same size as inputs but none/0 for when not computed.
-        # remember fm-bm discussion will need to loop through as many times
-        # as the number of outputs. in forward more this will be more
-        # efficient.
-        autodiff(ordered_ops, retain_graph, accumulate_grad=False)
+        grad_map = {}
+        for out in outputs:
+            # TODO: these multiple calls to topo_order can be optimized.
+            # by sending in visited and order. but need to weed out
+            # ops that are not part of this graph.
+            ordered_ops = topological_order(out.op, required_ops)
+            autodiff(ordered_ops,
+                     retain_graph=retain_graph if out is outputs[-1] else True,
+                     populate_grad=False,
+                     inputs=inputs,
+                     grad_map=grad_map)
+    return grad_map.values()
 
 
 def autodiff(ordered_ops: List[ops.Operator],
              retain_graph: bool,
-             accumulate_grad=True):
+             populate_grad=True,
+             inputs=None,
+             grad_map: Dict[node.Node, node. Node] = None):
+    if not populate_grad and inputs is None:
+        raise ValueError(
+            "Must provide a sequence of inputs to differentiate with respect"
+            " to when populate_grad is set to `False`.")
+    if inputs is not None and grad_map is None:
+        grad_map = {inp: None for inp in inputs}
     op = ordered_ops.pop()
     grad_output = op.grad_store.value
     op.grad_store.reset()
     output = op.variable
-    if (accumulate_grad
+    if (populate_grad
             and output is not None
             and (output.is_leaf() or output.retains_grad)):
         output.grad = (grad_output if output.grad is None
                        else output.grad + grad_output)
+    elif output.is_leaf() and output in grad_map:
+        grad_map[output] = (grad_output if grad_map[output] is None
+                            else grad_map[output] + grad_output)
     grads = op.backward(grad_output)
     grads = (grads,) if isinstance(grads, node.Node) else grads
     for child, grad in zip(op.next_ops, grads):
@@ -116,4 +129,5 @@ def autodiff(ordered_ops: List[ops.Operator],
     if not retain_graph:
         op.clear_cache()
     if ordered_ops:
-        autodiff(ordered_ops, retain_graph, accumulate_grad)
+        autodiff(ordered_ops, retain_graph, populate_grad, inputs, grad_map)
+    return grad_map
