@@ -48,9 +48,6 @@ def prune_graph(inputs: Sequence[node.Node], outputs: Sequence[node.Node]):
         selected = select_nodes(output.op, inputs, visited, selected)
     return selected
 
-# TODO: What to do when there is no path from output to input? zero or none?
-# torch throws an error.
-
 
 def backward(output: node.Node,
              grad_output=None,
@@ -80,7 +77,9 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
             f" lengths {len(grad_outputs)} and {len(outputs)} instead. ")
     with grad_mode.set_grad_enabled(create_graph):
         for i, (out, g_out) in enumerate(zip(outputs, grad_outputs)):
-            grad_outputs[i] = (node.Node(1., requires_grad=create_graph)
+            # TODO: changed requires grad here to fix memory leaks.
+            # seems to have triggered another side effect. investigate.
+            grad_outputs[i] = (node.Node(1.)
                                if g_out is None else g_out)
             out.op.grad_store.update(grad_outputs[i])
         required_ops = prune_graph(inputs, outputs)
