@@ -17,15 +17,15 @@ def prop_grad(inp):
 
 @dataclasses.dataclass
 class GradStore:
-    value: node.Node = dataclasses.field(default_factory=lambda: node.Node(0.))
+    value: node.Node = None
 
     def reset(self):
-        self.value = node.Node(0.)
+        self.value = None
 
     def update(self, grad: node.Node):
         # Note: if incoming grad has requires_grad=True then this value becomes
         # part of the graph thus making higher order derivatives possible.
-        self.value = self.value + grad
+        self.value = self.value + grad if self.value is not None else grad
 
 
 class Operator(abc.ABC):

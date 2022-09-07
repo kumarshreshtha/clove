@@ -108,6 +108,8 @@ def make_dot(root: node.Node,
              show_grads=False):
     dot = graphviz.Digraph(node_attr=NODE_ATTR, graph_attr=dict(size="12,12"))
     make_out_node(dot, root)
+    if root.op is None:
+        return dot
     make_nodes(
         dot,
         root.op,
