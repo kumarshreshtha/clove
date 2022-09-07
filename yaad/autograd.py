@@ -77,8 +77,9 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
             f" lengths {len(grad_outputs)} and {len(outputs)} instead. ")
     with grad_mode.set_grad_enabled(create_graph):
         for i, (out, g_out) in enumerate(zip(outputs, grad_outputs)):
-            grad_outputs[i] = (node.Node(1., requires_grad=True)
-                               if g_out is None else g_out)
+            grad_outputs[i] = (
+                node.Node(1., requires_grad=create_graph)
+                if g_out is None else g_out)
             out.op.grad_store.update(grad_outputs[i])
         required_ops = prune_graph(inputs, outputs)
         grad_map = None

@@ -1,4 +1,3 @@
-from typing import Dict
 import graphviz
 
 from yaad import node
@@ -16,8 +15,8 @@ OP = dict(NODE_ATTR,
           shape="circle",
           fillcolor="dimgray",
           fontcolor="white",
-          width="0.5",
-          hieght="0.5",
+          width="0.6",
+          hieght="0.6",
           fixedsize="true")
 OP_CACHE = dict(NODE_ATTR, shape="box", fillcolor="orange")
 LEAF = dict(NODE_ATTR, shape="box", fillcolor="lightblue")
