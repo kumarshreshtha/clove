@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+import math
 from typing import Optional, Sequence, Union
 import weakref
 
@@ -90,11 +91,15 @@ class Operator(abc.ABC):
         self._cache.clear()
 
     def save_for_backward(self, name, value):
-        if self.requires_grad:
-            self._cache[name] = value
+        self._cache[name] = value
 
     def saved_value(self, name):
-        return self._cache.get(name, None)
+        if name not in self._cache:
+            raise RuntimeError(f"called backward on {self.__class__.__name__} "
+                               "after releasing the saved tensors. In order "
+                               "to call backward multiple times please set "
+                               "`retain_graph=True`.")
+        return self._cache[name]
 
     # def __repr__(self):
     #     op_repr = f"Operator({self.__class__.__name__}[{self.symbol}])"
@@ -139,26 +144,63 @@ class AddOp(Operator, symbol="+"):
         return grad_output, grad_output
 
 
-class MulOp(Operator, symbol="*"):
+class MulOp(Operator, symbol="<&times;>"):
     def forward(self,
                 inp: node.Node,
                 other: node.Node):
-        if inp.requires_grad:
-            self.save_for_backward("other", other)
-        if other.requires_grad:
-            self.save_for_backward("inp", inp)
+        self.save_for_backward("other", other)
+        self.save_for_backward("inp", inp)
         return node.Node(inp.data * other.data)
 
-    # TODO: saved_value can be used to determine if a second backward is being performed
-    # on the same graph without retain grad. cannot rely on None returns anymore for normal
-    # behavior.
     def backward(self, grad_output: node.Node):
-        # reusing the forward definition allows for higher order derivatives.
         other = self.saved_value("other")
         inp = self.saved_value("inp")
-        grad_inp = other * grad_output if other is not None else None
-        grad_other = inp * grad_output if inp is not None else None
+        grad_inp = other * grad_output
+        grad_other = inp * grad_output
         return grad_inp, grad_other
+
+
+class MinusOp(Operator, symbol="-"):
+    def forward(self, inp, other):
+        return node.Node(inp.data - other.data)
+
+    def backward(self, grad_output: node.Node):
+        return grad_output, -grad_output
+
+
+class ExpOp(Operator, symbol="e"):
+    def forward(self, inp: node.Node):
+        out = node.Node(math.exp(inp.data))
+        self.save_for_backward("out", out)
+
+    def backward(self, grad_output):
+        return self.saved_value("out") * grad_output
+
+# TODO: see for the corner case of x**0.
+
+
+class PowOp(Operator, symbol=""):
+    def forward(self, inp: node.Node, other: Number):
+        out = node.Node(inp.data**other)
+        self.save_for_backward("inp", inp)
+        self.save_for_backward("other", other)
+        return out
+
+    def backward(self, grad_output: node.Node):
+        other = self.saved_value("other")
+        inp = self.saved_value("inp")
+        return other * inp**(other - 1) * grad_output
+
+
+class SigmoidOp(Operator, symbol="<&sigma;>"):
+    def forward(self, inp: node.Node):
+        out = (1 + exp(-inp))**-1
+        self.save_for_backward("out", out)
+        return out
+
+    def backward(self, grad_output: node.Node):
+        out = self.saved_value(out)
+        return grad_output * out * (1 - out)
 
 
 def add(input: node.Node, other: Union[node.Node, Number]):
@@ -171,3 +213,7 @@ def multiply(input: node.Node, other: Union[node.Node, Number]):
 
 def clone(input: node.Node):
     return CloneOp.apply(input)
+
+
+def exp(input: node.Node):
+    return ExpOp.apply(input)

@@ -8,6 +8,7 @@ import warnings
 from yaad import autograd
 from yaad import ops
 
+
 class Node:
     """Scalar Node."""
 
@@ -69,6 +70,9 @@ class Node:
 
     def __mul__(self, other):
         return ops.multiply(self, other)
+
+    def __neg__(self):
+        return -1 * self
 
     def describe(self):
         # TODO: returns pretty formatted self.name, self.data,
