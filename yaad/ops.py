@@ -176,8 +176,6 @@ class ExpOp(Operator, symbol="e"):
     def backward(self, grad_output):
         return self.saved_value("out") * grad_output
 
-# TODO: see for the corner case of x**0.
-
 
 class PowOp(Operator, symbol=""):
     def forward(self, inp: node.Node, other: Number):
