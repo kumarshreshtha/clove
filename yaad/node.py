@@ -65,11 +65,28 @@ class Node:
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
 
+    # TODO: these dunder methods should be hooked in ops at creation?
+
     def __add__(self, other):
         return ops.add(self, other)
 
+    def __radd__(self, other):
+        return ops.add(self, other)
+
+    def __sub__(self, other):
+        return ops.sub(self, other)
+
+    def __rsub__(self, other):
+        return ops.sub(self, other)
+
     def __mul__(self, other):
         return ops.multiply(self, other)
+
+    def __rmul__(self, other):
+        return ops.multiply(self, other)
+
+    def __pow__(self, other):
+        return ops.pow(self, other)
 
     def __neg__(self):
         return -1 * self

@@ -16,6 +16,10 @@ def prop_grad(inp):
     return isinstance(inp, node.Node) and inp.requires_grad
 
 
+def is_number(inp):
+    return isinstance(inp, (int, float))
+
+
 @dataclasses.dataclass
 class GradStore:
     value: node.Node = None
@@ -136,7 +140,9 @@ class AddOp(Operator, symbol="+"):
     def forward(self,
                 inp: node.Node,
                 other: node.Node):
-        return node.Node(inp.data + other.data)
+        inp_data = inp if is_number(inp) else inp.data
+        other_data = other if is_number(other) else other.data
+        return node.Node(inp_data + other_data)
 
     def backward(self, grad_output: Optional[node.Node]):
         if grad_output is None:
@@ -148,9 +154,11 @@ class MulOp(Operator, symbol="<&times;>"):
     def forward(self,
                 inp: node.Node,
                 other: node.Node):
+        inp_data = inp if is_number(inp) else inp.data
+        other_data = other if is_number(other) else other.data
         self.save_for_backward("other", other)
         self.save_for_backward("inp", inp)
-        return node.Node(inp.data * other.data)
+        return node.Node(inp_data * other_data)
 
     def backward(self, grad_output: node.Node):
         other = self.saved_value("other")
@@ -162,7 +170,7 @@ class MulOp(Operator, symbol="<&times;>"):
 
 class MinusOp(Operator, symbol="-"):
     def forward(self, inp, other):
-        return node.Node(inp.data - other.data)
+        return inp + (-other)
 
     def backward(self, grad_output: node.Node):
         return grad_output, -grad_output
@@ -172,12 +180,13 @@ class ExpOp(Operator, symbol="e"):
     def forward(self, inp: node.Node):
         out = node.Node(math.exp(inp.data))
         self.save_for_backward("out", out)
+        return out
 
     def backward(self, grad_output):
         return self.saved_value("out") * grad_output
 
 
-class PowOp(Operator, symbol=""):
+class PowOp(Operator, symbol="**"):
     def forward(self, inp: node.Node, other: Number):
         out = node.Node(inp.data**other)
         self.save_for_backward("inp", inp)
@@ -197,9 +206,11 @@ class SigmoidOp(Operator, symbol="<&sigma;>"):
         return out
 
     def backward(self, grad_output: node.Node):
-        out = self.saved_value(out)
+        out = self.saved_value("out")
         return grad_output * out * (1 - out)
 
+
+# TODO: create a functional registry in the subclass init for these functions.
 
 def add(input: node.Node, other: Union[node.Node, Number]):
     return AddOp.apply(input, other)
@@ -209,9 +220,21 @@ def multiply(input: node.Node, other: Union[node.Node, Number]):
     return MulOp.apply(input, other)
 
 
+def sigmoid(input: node.Node):
+    return SigmoidOp.apply(input)
+
+
 def clone(input: node.Node):
     return CloneOp.apply(input)
 
 
 def exp(input: node.Node):
     return ExpOp.apply(input)
+
+
+def pow(input: node.Node, other: Number):
+    return PowOp.apply(input, other)
+
+
+def sub(input: node.Node, other: Union[node.Node, Number]):
+    return MinusOp.apply(input, other)

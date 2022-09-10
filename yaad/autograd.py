@@ -8,7 +8,7 @@ from yaad import grad_mode
 
 
 def topological_order(root: Optional[ops.Operator],
-                      required_ops: Optional[Set[ops.Operator]],
+                      required_ops: Optional[Set[ops.Operator]] = None,
                       _order=None,
                       _visited=None) -> List[ops.Operator]:
     _visited = set() if _visited is None else _visited
