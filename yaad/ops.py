@@ -20,6 +20,14 @@ def is_number(inp):
     return isinstance(inp, (int, float))
 
 
+class OperatorFactory:
+    _registry = {}
+
+    @classmethod
+    def register_op(cls, name, op):
+        cls._registry[name] = op
+
+
 @dataclasses.dataclass
 class GradStore:
     value: node.Node = None
@@ -45,8 +53,11 @@ class Operator(abc.ABC):
         self._var_ref = weakref.ref(variable) if variable is not None else None
         self.grad_store = GradStore()
 
-    def __init_subclass__(cls, symbol: Optional[str] = None) -> None:
+    def __init_subclass__(
+            cls, fn_name=None, symbol: Optional[str] = None,) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
+        if fn_name is not None:
+            OperatorFactory.register_op(fn_name, cls.apply)
 
     @property
     def next_ops(self):
@@ -126,7 +137,7 @@ class LeafOp(Operator, symbol="leaf"):
         return grad_output
 
 
-class CloneOp(Operator):
+class CloneOp(Operator, fn_name="clone", symbol="clone"):
     def forward(self, inp: node.Node):
         return node.Node(inp.data)
 
@@ -136,7 +147,7 @@ class CloneOp(Operator):
 # TODO: think how to handle mixed ops between Node and int/float.
 
 
-class AddOp(Operator, symbol="+"):
+class AddOp(Operator, fn_name="add", symbol="+"):
     def forward(self,
                 inp: node.Node,
                 other: node.Node):
@@ -150,7 +161,7 @@ class AddOp(Operator, symbol="+"):
         return grad_output, grad_output
 
 
-class MulOp(Operator, symbol="<&times;>"):
+class MulOp(Operator, fn_name="multiply", symbol="<&times;>"):
     def forward(self,
                 inp: node.Node,
                 other: node.Node):
@@ -168,7 +179,7 @@ class MulOp(Operator, symbol="<&times;>"):
         return grad_inp, grad_other
 
 
-class MinusOp(Operator, symbol="-"):
+class MinusOp(Operator, fn_name="subtract", symbol="-"):
     def forward(self, inp, other):
         return inp + (-other)
 
@@ -176,7 +187,7 @@ class MinusOp(Operator, symbol="-"):
         return grad_output, -grad_output
 
 
-class ExpOp(Operator, symbol="e"):
+class ExpOp(Operator, fn_name="exp", symbol="e"):
     def forward(self, inp: node.Node):
         out = node.Node(math.exp(inp.data))
         self.save_for_backward("out", out)
@@ -186,7 +197,7 @@ class ExpOp(Operator, symbol="e"):
         return self.saved_value("out") * grad_output
 
 
-class PowOp(Operator, symbol="**"):
+class PowOp(Operator, fn_name="pow", symbol="**"):
     def forward(self, inp: node.Node, other: Number):
         out = node.Node(inp.data**other)
         self.save_for_backward("inp", inp)
@@ -199,7 +210,7 @@ class PowOp(Operator, symbol="**"):
         return other * inp**(other - 1) * grad_output
 
 
-class SigmoidOp(Operator, symbol="<&sigma;>"):
+class SigmoidOp(Operator, fn_name="sigmoid", symbol="<&sigma;>"):
     def forward(self, inp: node.Node):
         out = (1 + exp(-inp))**-1
         self.save_for_backward("out", out)
