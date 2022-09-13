@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+import functools
 import math
-from typing import Optional, Sequence, Union
+import types
+from typing import Callable, Optional, Sequence, Union
 import weakref
 
 from yaad import node
@@ -20,12 +22,25 @@ def is_number(inp):
     return isinstance(inp, (int, float))
 
 
-class OperatorFactory:
+UnarySignature = ""
+BinarySignature = ""
+
+
+class FunctionalFactory:
     _registry = {}
 
     @classmethod
-    def register_op(cls, name, op):
-        cls._registry[name] = op
+    def register_op(cls, name, op: Operator, doc="this is a test"):
+        # TODO: make the partial function
+        # TODO: update signature
+        # TODO: create bindings for Node functions.
+        new_op_fn = types.FunctionType(op.apply.__code__,
+                                       op.apply.__globals__,
+                                       name,
+                                       op.apply.__defaults__,
+                                       op.apply.__closure__)
+        new_op_fn.__doc__ = doc
+        cls._registry[name] = functools.partial(new_op_fn, op)
 
 
 @dataclasses.dataclass
@@ -57,29 +72,29 @@ class Operator(abc.ABC):
             cls, fn_name=None, symbol: Optional[str] = None,) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
         if fn_name is not None:
-            OperatorFactory.register_op(fn_name, cls.apply)
+            FunctionalFactory.register_op(fn_name, cls)
 
-    @property
+    @ property
     def next_ops(self):
         return self._children
 
-    @property
+    @ property
     def variable(self):
         return self._var_ref() if self._var_ref is not None else None
 
-    @variable.setter
+    @ variable.setter
     def variable(self, value):
         self._var_ref = weakref.ref(value)
 
-    @abc.abstractmethod
+    @ abc.abstractmethod
     def forward(self, *args):
         raise NotImplementedError
 
-    @abc.abstractmethod
+    @ abc.abstractmethod
     def backward(self, grad_output: node.Node):
         raise NotImplementedError
 
-    @classmethod
+    @ classmethod
     def apply(cls, *args):
         children = []
         requires_grad = grad_mode.is_grad_enabled()
