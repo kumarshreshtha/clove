@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import dataclasses
 import functools
+import inspect
 import math
 import types
 from typing import Callable, Optional, Sequence, Union
@@ -26,21 +27,29 @@ UnarySignature = ""
 BinarySignature = ""
 
 
+def _wrap_functional(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
 class FunctionalFactory:
     _registry = {}
 
     @classmethod
-    def register_op(cls, name, op: Operator, doc="this is a test"):
-        # TODO: make the partial function
-        # TODO: update signature
-        # TODO: create bindings for Node functions.
-        new_op_fn = types.FunctionType(op.apply.__code__,
-                                       op.apply.__globals__,
-                                       name,
-                                       op.apply.__defaults__,
-                                       op.apply.__closure__)
-        new_op_fn.__doc__ = doc
-        cls._registry[name] = functools.partial(new_op_fn, op)
+    def register_op(cls, name, op: Operator):
+        new_fn = _wrap_functional(op.apply)
+        new_fn.__doc__ = op.forward.__doc__
+        new_fn.__annotations__ = op.forward.__annotations__
+        new_fn.__defaults__ = op.forward.__defaults__
+        new_fn.__name__ = name
+        sig = inspect.signature(op.forward)
+        new_sig = sig.replace(
+            parameters=[param for param in sig.parameters.values()
+                        if param.name != "self"])
+        new_fn.__signature__ = new_sig
+        cls._registry[name] = new_fn
 
 
 @dataclasses.dataclass
@@ -74,27 +83,27 @@ class Operator(abc.ABC):
         if fn_name is not None:
             FunctionalFactory.register_op(fn_name, cls)
 
-    @ property
+    @property
     def next_ops(self):
         return self._children
 
-    @ property
+    @property
     def variable(self):
         return self._var_ref() if self._var_ref is not None else None
 
-    @ variable.setter
+    @variable.setter
     def variable(self, value):
         self._var_ref = weakref.ref(value)
 
-    @ abc.abstractmethod
+    @abc.abstractmethod
     def forward(self, *args):
         raise NotImplementedError
 
-    @ abc.abstractmethod
+    @abc.abstractmethod
     def backward(self, grad_output: node.Node):
         raise NotImplementedError
 
-    @ classmethod
+    @classmethod
     def apply(cls, *args):
         children = []
         requires_grad = grad_mode.is_grad_enabled()
@@ -165,7 +174,8 @@ class CloneOp(Operator, fn_name="clone", symbol="clone"):
 class AddOp(Operator, fn_name="add", symbol="+"):
     def forward(self,
                 inp: node.Node,
-                other: node.Node):
+                other: Union[node.Node, Number]):
+        """Adds two nodes or a node and a number."""
         inp_data = inp if is_number(inp) else inp.data
         other_data = other if is_number(other) else other.data
         return node.Node(inp_data + other_data)
