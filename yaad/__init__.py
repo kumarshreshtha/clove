@@ -1,6 +1,7 @@
 
 from . import ops
 import functools
+from .node import Node
 
 
 def warp_call(func, cls):
@@ -12,3 +13,6 @@ def warp_call(func, cls):
 
 for name, fn in ops.FunctionalFactory._registry.items():
     globals()[name] = fn
+
+for name, fn in ops.FunctionalFactory._node_registry.items():
+    setattr(Node, name, fn)

@@ -67,29 +67,29 @@ class Node:
 
     # TODO: these dunder methods should be hooked in ops at creation?
 
-    def __add__(self, other):
-        return ops.add(self, other)
+    # def __add__(self, other):
+    #     return ops.add(self, other)
 
-    def __radd__(self, other):
-        return ops.add(self, other)
+    # def __radd__(self, other):
+    #     return ops.add(self, other)
 
-    def __sub__(self, other):
-        return ops.sub(self, other)
+    # def __sub__(self, other):
+    #     return ops.sub(self, other)
 
-    def __rsub__(self, other):
-        return ops.sub(self, other)
+    # def __rsub__(self, other):
+    #     return ops.sub(self, other)
 
-    def __mul__(self, other):
-        return ops.multiply(self, other)
+    # def __mul__(self, other):
+    #     return ops.multiply(self, other)
 
-    def __rmul__(self, other):
-        return ops.multiply(self, other)
+    # def __rmul__(self, other):
+    #     return ops.multiply(self, other)
 
-    def __pow__(self, other):
-        return ops.pow(self, other)
+    # def __pow__(self, other):
+    #     return ops.pow(self, other)
 
-    def __neg__(self):
-        return -1 * self
+    # def __neg__(self):
+    #     return -1 * self
 
     def describe(self):
         # TODO: returns pretty formatted self.name, self.data,

@@ -5,8 +5,7 @@ import dataclasses
 import functools
 import inspect
 import math
-import types
-from typing import Callable, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 import weakref
 
 from yaad import node
@@ -23,19 +22,20 @@ def is_number(inp):
     return isinstance(inp, (int, float))
 
 
-UnarySignature = ""
-BinarySignature = ""
-
-
 def _wrap_functional(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
     return wrapper
 
+# TODO: add Node hooks for Node.__add__ and Node.sigmoid like ops.
+# TODO: functions can be more than one, allow passing list of names
+# instead of a single name.
+
 
 class FunctionalFactory:
     _registry = {}
+    _node_registry = {}
 
     @classmethod
     def register_op(cls, name, op: Operator):
@@ -50,6 +50,20 @@ class FunctionalFactory:
                         if param.name != "self"])
         new_fn.__signature__ = new_sig
         cls._registry[name] = new_fn
+
+    @classmethod
+    def register_node_method(cls, name, op: Operator):
+        new_fn = _wrap_functional(op.apply)
+        new_fn.__doc__ = op.forward.__doc__
+        new_fn.__annotations__ = op.forward.__annotations__
+        new_fn.__defaults__ = op.forward.__defaults__
+        new_fn.__name__ = name
+        sig = inspect.signature(op.forward)
+        new_sig = sig.replace(
+            parameters=[param for param in sig.parameters.values()
+                        if param.name != "inp"])
+        new_fn.__signature__ = new_sig
+        cls._node_registry[name] = new_fn
 
 
 @dataclasses.dataclass
@@ -77,11 +91,15 @@ class Operator(abc.ABC):
         self._var_ref = weakref.ref(variable) if variable is not None else None
         self.grad_store = GradStore()
 
-    def __init_subclass__(
-            cls, fn_name=None, symbol: Optional[str] = None,) -> None:
+    def __init_subclass__(cls,
+                          fn_name=None,
+                          node_method_name=None,
+                          symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
         if fn_name is not None:
             FunctionalFactory.register_op(fn_name, cls)
+        if node_method_name is not None:
+            FunctionalFactory.register_node_method(node_method_name, cls)
 
     @property
     def next_ops(self):
@@ -171,7 +189,7 @@ class CloneOp(Operator, fn_name="clone", symbol="clone"):
 # TODO: think how to handle mixed ops between Node and int/float.
 
 
-class AddOp(Operator, fn_name="add", symbol="+"):
+class AddOp(Operator, fn_name="add", node_method_name="__add__", symbol="+"):
     def forward(self,
                 inp: node.Node,
                 other: Union[node.Node, Number]):
@@ -235,42 +253,13 @@ class PowOp(Operator, fn_name="pow", symbol="**"):
         return other * inp**(other - 1) * grad_output
 
 
-class SigmoidOp(Operator, fn_name="sigmoid", symbol="<&sigma;>"):
+class SigmoidOp(Operator, fn_name="sigmoid",
+                node_method_name="sigmoid", symbol="<&sigma;>"):
     def forward(self, inp: node.Node):
-        out = (1 + exp(-inp))**-1
+        out = (1 + ExpOp.apply(-inp))**-1
         self.save_for_backward("out", out)
         return out
 
     def backward(self, grad_output: node.Node):
         out = self.saved_value("out")
         return grad_output * out * (1 - out)
-
-
-# TODO: create a functional registry in the subclass init for these functions.
-
-def add(input: node.Node, other: Union[node.Node, Number]):
-    return AddOp.apply(input, other)
-
-
-def multiply(input: node.Node, other: Union[node.Node, Number]):
-    return MulOp.apply(input, other)
-
-
-def sigmoid(input: node.Node):
-    return SigmoidOp.apply(input)
-
-
-def clone(input: node.Node):
-    return CloneOp.apply(input)
-
-
-def exp(input: node.Node):
-    return ExpOp.apply(input)
-
-
-def pow(input: node.Node, other: Number):
-    return PowOp.apply(input, other)
-
-
-def sub(input: node.Node, other: Union[node.Node, Number]):
-    return MinusOp.apply(input, other)
