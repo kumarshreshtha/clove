@@ -1,7 +1,7 @@
 import graphviz
 
-from yaad import node
-from yaad import ops
+from yaad.autodiff import node
+from yaad import autodiff
 
 NODE_ATTR = dict(align="left",
                  fontsize="10",
@@ -39,7 +39,7 @@ def make_data_node(dot, data: node.Node, is_leaf: bool, show_grad: bool):
     dot.node(id_repr(data), n_repr, **(LEAF if is_leaf else HIDDEN))
 
 
-def add_cache_to_op(dot, op: ops.Operator):
+def add_cache_to_op(dot, op: autodiff.Operator):
     cache = op._cache
     if not cache:
         return
@@ -56,12 +56,12 @@ def make_out_node(dot, out: node.Node):
     dot.node(id_repr(out), str(out), **OUT)
 
 
-def make_op_node(dot, op: ops.Operator):
+def make_op_node(dot, op: autodiff.Operator):
     dot.node(id_repr(op), op.symbol, **OP)
 
 
 def make_nodes(dot: graphviz.Digraph,
-               root_op: ops.Operator,
+               root_op: autodiff.Operator,
                *,
                show_intermediate_outs: bool,
                show_saved: bool,
@@ -90,7 +90,7 @@ def make_nodes(dot: graphviz.Digraph,
     if show_saved:
         add_cache_to_op(dot, root_op)
     if not _is_out and root_op.variable is not None:
-        is_leaf = isinstance(root_op, ops.LeafOp)
+        is_leaf = root_op.variable.is_leaf()
         if not show_intermediate_outs and not is_leaf:
             return
         make_data_node(dot,

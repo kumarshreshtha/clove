@@ -1,16 +1,33 @@
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Sequence, Set, Union
 
-from yaad import ops
-from yaad import node
+import dataclasses
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Set, Union
+
 from yaad import grad_mode
+from yaad.autodiff import node
+
+if TYPE_CHECKING:
+    from yaad.autodiff.operators import ops
 
 
-def topological_order(root: Optional[ops.Operator],
-                      required_ops: Optional[Set[ops.Operator]] = None,
-                      _order=None,
-                      _visited=None) -> List[ops.Operator]:
+@dataclasses.dataclass
+class GradStore:
+    value: node.Node = None
+
+    def reset(self):
+        self.value = None
+
+    def update(self, grad: node.Node):
+        # Note: if incoming grad has requires_grad=True then this value becomes
+        # part of the graph thus making higher order derivatives possible.
+        self.value = self.value + grad if self.value is not None else grad
+
+
+def _topological_order(root: Optional[ops.Operator],
+                       required_ops: Optional[Set[ops.Operator]] = None,
+                       _order=None,
+                       _visited=None) -> List[ops.Operator]:
     _visited = set() if _visited is None else _visited
     _order = [] if _order is None else _order
     if root is None or (required_ops is not None and root not in required_ops):
@@ -19,7 +36,7 @@ def topological_order(root: Optional[ops.Operator],
         return _order
     _visited.add(root)
     for op in root._children:
-        _order = topological_order(op, required_ops, _order, _visited)
+        _order = _topological_order(op, required_ops, _order, _visited)
     _order.append(root)
     return _order
 
@@ -56,8 +73,8 @@ def backward(output: node.Node,
         grad_output = (node.Node(1.)
                        if grad_output is None else grad_output)
         output.op.grad_store.update(grad_output)
-        ordered_ops = topological_order(output.op)
-        autodiff(ordered_ops, retain_graph, populate_grad=True)
+        ordered_ops = _topological_order(output.op)
+        _autodiff(ordered_ops, retain_graph, populate_grad=True)
 
 
 def grad(outputs: Union[node.Node, Sequence[node.Node]],
@@ -87,8 +104,8 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
             # TODO: these multiple calls to topo_order can be optimized.
             # by sending in visited and order. but need to weed out
             # ops that are not part of this graph.
-            ordered_ops = topological_order(out.op, required_ops)
-            grad_map = autodiff(
+            ordered_ops = _topological_order(out.op, required_ops)
+            grad_map = _autodiff(
                 ordered_ops,
                 retain_graph=retain_graph if out is outputs[-1] else True,
                 populate_grad=False,
@@ -97,11 +114,11 @@ def grad(outputs: Union[node.Node, Sequence[node.Node]],
     return tuple(grad_map.values())
 
 
-def autodiff(ordered_ops: List[ops.Operator],
-             retain_graph: bool,
-             populate_grad=True,
-             inputs=None,
-             grad_map: Dict[node.Node, node. Node] = None):
+def _autodiff(ordered_ops: List[ops.Operator],
+              retain_graph: bool,
+              populate_grad=True,
+              inputs=None,
+              grad_map: Dict[node.Node, node. Node] = None):
     if not populate_grad and inputs is None:
         raise ValueError(
             "Must provide a sequence of inputs to differentiate with respect"
@@ -128,5 +145,5 @@ def autodiff(ordered_ops: List[ops.Operator],
     if not retain_graph:
         op.clear_cache()
     if ordered_ops:
-        autodiff(ordered_ops, retain_graph, populate_grad, inputs, grad_map)
+        _autodiff(ordered_ops, retain_graph, populate_grad, inputs, grad_map)
     return grad_map

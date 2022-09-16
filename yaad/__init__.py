@@ -1,18 +1,4 @@
-
-from . import ops
-import functools
-from .node import Node
-
-
-def warp_call(func, cls):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(cls, *args, **kwargs)
-    return wrapper
-
-
-for name, fn in ops.FunctionalFactory._registry.items():
-    globals()[name] = fn
-
-for name, fn in ops.FunctionalFactory._node_registry.items():
-    setattr(Node, name, fn)
+from . import autodiff
+from .autodiff import Node
+from .grad_mode import no_grad, set_grad_enabled, is_grad_enabled
+from .dot import make_dot
