@@ -51,7 +51,8 @@ def prune_graph(inputs: Sequence[node.Node], outputs: Sequence[node.Node]):
         if root is None:
             return _selected
         _visited.add(root)
-        if isinstance(root, ops.LeafOp) and root.variable in inputs:
+        # TODO: do we need the is_leaf condition?
+        if root.variable is not None and root.variable.is_leaf() and root.variable in inputs:
             _selected.add(root)
             return _selected
         for child in root.next_ops:
