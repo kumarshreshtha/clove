@@ -1,27 +1,13 @@
 
 from __future__ import annotations
 
-import dataclasses
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Set, Union
 
 from yaad import grad_mode
 from yaad.autodiff import node
 
 if TYPE_CHECKING:
-    from yaad.autodiff.operators import ops
-
-
-@dataclasses.dataclass
-class GradStore:
-    value: node.Node = None
-
-    def reset(self):
-        self.value = None
-
-    def update(self, grad: node.Node):
-        # Note: if incoming grad has requires_grad=True then this value becomes
-        # part of the graph thus making higher order derivatives possible.
-        self.value = self.value + grad if self.value is not None else grad
+    from yaad.autodiff import ops
 
 
 def _topological_order(root: Optional[ops.Operator],
@@ -138,11 +124,12 @@ def _autodiff(ordered_ops: List[ops.Operator],
     elif output is not None and output.is_leaf() and output in grad_map:
         grad_map[output] = (grad_output if grad_map[output] is None
                             else grad_map[output] + grad_output)
-    grads = op.backward(grad_output)
-    grads = (grads,) if isinstance(grads, node.Node) else grads
-    for child, grad in zip(op.next_ops, grads):
-        if child is not None:
-            child.grad_store.update(grad)
+    if op.next_ops:
+        grads = op.backward(grad_output)
+        grads = (grads,) if isinstance(grads, node.Node) else grads
+        for child, grad in zip(op.next_ops, grads):
+            if child is not None:
+                child.grad_store.update(grad)
     if not retain_graph:
         op.clear_cache()
     if ordered_ops:

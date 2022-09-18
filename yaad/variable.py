@@ -1,17 +1,14 @@
-"""_summary_"""
-
-from __future__ import annotations
-
-import inspect
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 import warnings
 
 from yaad.autodiff import engine
-from yaad.autodiff import ops
+
+if TYPE_CHECKING:
+    from yaad import operator
 
 
-class BaseVariable:
-    """Container class for a variable and it's gradients."""
+class Variable:
+    """Container class for a variable and it's gradient."""
 
     def __init__(self,
                  data,
@@ -21,7 +18,7 @@ class BaseVariable:
         self._grad = None
         self.requires_grad = requires_grad
         self.name = name
-        self.op: Optional[ops.Operator] = None
+        self.op: Optional[operator.Operator] = None
         self._retains_grad = False
 
     @property
@@ -66,9 +63,6 @@ class BaseVariable:
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
 
-    def __neg__(self):
-        return -1 * self
-
     def describe(self):
         # TODO: returns pretty formatted self.name, self.data,
         # self.requires_grad, self.is_leaf, if leaf and non None grad then
@@ -78,44 +72,3 @@ class BaseVariable:
     def __repr__(self):
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
         return f"{self.__class__.__name__}({self.data}{grad_repr})"
-
-
-def _register_node_methods():
-    _OP_REGISTY = dict(
-        __add__=ops.AddOp,
-        __radd__=ops.AddOp,
-        __mul__=ops.MulOp,
-        __rmul__=ops.MulOp,
-        __sub__=ops.MinusOp,
-        __rsub__=ops.MinusOp,
-        __pow__=ops.PowOp,
-        sigmoid=ops.SigmoidOp
-    )
-    for name, op in Node._OP_REGISTY.items():
-        new_fn = ops.wrap_functional(op.apply)
-        new_fn.__doc__ = op.forward.__doc__
-        new_fn.__annotations__ = op.forward.__annotations__
-        new_fn.__defaults__ = op.forward.__defaults__
-        new_fn.__name__ = name
-        sig = inspect.signature(op.forward)
-        new_sig = sig.replace(
-            parameters=[param for param in sig.parameters.values()
-                        if param.name != "inp"])
-        new_fn.__signature__ = new_sig
-        setattr(Node, name, new_fn)
-
-
-_register_node_methods()
-
-
-"""
-class TensorBase:
-    def __init__(self, data, requires_grad, name)
-        ...
-
-Operator:
-    works with TensorBase
-
-TensorwithOps:
-    ...
-"""
