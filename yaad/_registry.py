@@ -1,3 +1,4 @@
+import collections
 import enum
 import functools
 import inspect
@@ -6,6 +7,7 @@ import inspect
 class FunctionNames(str, enum.Enum):
     ADD = "add"
     MULTIPLY = "multiply"
+    NEGATE = "neg"
     SUBTRACT = "sub"
     CLONE = "clone"
     EXP = "exp"
@@ -15,18 +17,38 @@ class FunctionNames(str, enum.Enum):
 # TODO: convert this to MutableMapping
 
 
-class _FunctionTable:
+class _FunctionTable(collections.abc.MutableMapping):
     def __init__(self):
-        self._fn_names = frozenset(fn for fn in FunctionNames)
-        self._associations = dict()
+        self.__fn_names = frozenset(fn for fn in FunctionNames)
+        self.__associations = dict()
 
     def __setitem__(self, key, value) -> None:
-        if key not in self._fn_names:
+        if key not in self.__fn_names:
             raise KeyError()
-        self._associations[key] = value
+        self.__associations[key] = value
 
     def __getitem__(self, key):
-        return self._associations[key]
+        return self.__associations[key]
+
+    def __delitem__(self, key):
+        raise NotImplementedError
+
+    def __iter__(self):
+        return iter(self.__associations)
+
+    def __len__(self):
+        return len(self.__associations)
+
+
+fn_table = _FunctionTable()
+
+
+def register_operator(name, op):
+    fn_table[name] = op
+
+
+def walk_registry():
+    yield from fn_table.items()
 
 
 def _bind_free_vars(func):
@@ -45,7 +67,7 @@ def _copy_op(name, op):
     return new_fn
 
 
-def _op_to_functional(name, op):
+def make_fn(name, op):
     new_fn = _copy_op(name, op)
     sig = inspect.signature(op.forward)
     new_sig = sig.replace(
@@ -55,21 +77,11 @@ def _op_to_functional(name, op):
     return new_fn
 
 
-def register_op_method(name, op):
+def make_method(name, op):
     new_fn = _copy_op(name, op)
     sig = inspect.signature(op.forward)
     new_sig = sig.replace(
         parameters=[param for param in sig.parameters.values()
                     if param.name != "input"])
     new_fn.__signature__ = new_sig
-
-
-fn_table = _FunctionTable()
-
-
-def register_functional(name, op):
-    fn_table[name] = _op_to_functional(name, op)
-
-
-def walk_registry():
-    yield from fn_table._associations.items()
+    return new_fn

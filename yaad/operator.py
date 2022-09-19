@@ -1,7 +1,7 @@
 from __future__ import annotations
 import dataclasses
 
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 import weakref
 
 
@@ -37,12 +37,18 @@ class Operator:
         self._var_ref = weakref.ref(variable) if variable is not None else None
         self.grad_store = self.GradStore()
 
-    def __init_subclass__(cls,
-                          implements=None,
-                          symbol: Optional[str] = None) -> None:
+    def __init_subclass__(
+            cls,
+            implements: Union[_registry.FunctionNames,
+                              Sequence[_registry.FunctionNames], None] = None,
+            symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
         if implements is not None:
-            _registry.register_functional(implements, cls)
+            if isinstance(implements, (list, tuple)):
+                for fn_name in implements:
+                    _registry.register_operator(fn_name, cls)
+            else:
+                _registry.register_operator(implements, cls)
 
     @property
     def next_ops(self):

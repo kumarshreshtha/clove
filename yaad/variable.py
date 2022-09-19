@@ -16,7 +16,12 @@ class Variable:
         __radd__=_registry.FunctionNames.ADD,
         __mul__=_registry.FunctionNames.MULTIPLY,
         __rmul__=_registry.FunctionNames.MULTIPLY,
+        __sub__=_registry.FunctionNames.SUBTRACT,
+        __neg__=_registry.FunctionNames.NEGATE,
+        __pow__=_registry.FunctionNames.POW
     )
+
+    # TODO: array function dispatch once moved from scalers to arrays.
 
     def __new__(cls, *args, **kwargs):
         # TODO: check that the function associations have been realized before

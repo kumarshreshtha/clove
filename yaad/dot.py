@@ -1,7 +1,8 @@
 import graphviz
 
-from yaad.autodiff import node
-from yaad import autodiff
+from yaad import operator
+from yaad import variable
+
 
 NODE_ATTR = dict(align="left",
                  fontsize="10",
@@ -28,7 +29,8 @@ def id_repr(data):
     return str(id(data))
 
 
-def make_data_node(dot, data: node.Node, is_leaf: bool, show_grad: bool):
+def make_data_node(dot, data: variable.Variable,
+                   is_leaf: bool, show_grad: bool):
     if not show_grad or data.grad is None:
         dot.node(id_repr(data), str(data), **(LEAF if is_leaf else HIDDEN))
         return
@@ -39,7 +41,7 @@ def make_data_node(dot, data: node.Node, is_leaf: bool, show_grad: bool):
     dot.node(id_repr(data), n_repr, **(LEAF if is_leaf else HIDDEN))
 
 
-def add_cache_to_op(dot, op: autodiff.Operator):
+def add_cache_to_op(dot, op: operator.Operator):
     cache = op._cache
     if not cache:
         return
@@ -52,16 +54,16 @@ def add_cache_to_op(dot, op: autodiff.Operator):
     dot.edge(id_repr(op), id_repr(op._cache), dir="none")
 
 
-def make_out_node(dot, out: node.Node):
+def make_out_node(dot, out: variable.Variable):
     dot.node(id_repr(out), str(out), **OUT)
 
 
-def make_op_node(dot, op: autodiff.Operator):
+def make_op_node(dot, op: operator.Operator):
     dot.node(id_repr(op), op.symbol, **OP)
 
 
 def make_nodes(dot: graphviz.Digraph,
-               root_op: autodiff.Operator,
+               root_op: operator.Operator,
                *,
                show_intermediate_outs: bool,
                show_saved: bool,
@@ -100,7 +102,7 @@ def make_nodes(dot: graphviz.Digraph,
         dot.edge(id_repr(root_op.variable), id_repr(root_op), dir="none")
 
 
-def make_dot(root: node.Node,
+def make_dot(root: variable.Variable,
              *,
              show_intermediate_outs: bool = False,
              show_saved=False,
