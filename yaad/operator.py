@@ -1,12 +1,12 @@
 from __future__ import annotations
+import dataclasses
 
-import functools
-import inspect
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import Optional, Sequence
 import weakref
 
 
 from yaad import grad_mode
+from yaad import _registry
 
 from yaad import variable
 
@@ -17,17 +17,14 @@ def prop_grad(inp):
 
 class Operator:
 
+    @dataclasses.dataclass
     class GradStore:
-
-        def __init__(self, value: Optional[variable.Variable]):
-            self.value = value
+        value: Optional[variable.Variable] = None
 
         def reset(self):
             self.value = None
 
         def update(self, grad: variable.Variable):
-            # Note: if incoming grad has requires_grad=True then this value becomes
-            # part of the graph thus making higher order derivatives possible.
             self.value = self.value + grad if self.value is not None else grad
 
     def __init__(self,
@@ -38,14 +35,14 @@ class Operator:
         self._children = tuple(children)
         self.requires_grad = requires_grad
         self._var_ref = weakref.ref(variable) if variable is not None else None
-        self.grad_store = Operator.GradStore()
+        self.grad_store = self.GradStore()
 
     def __init_subclass__(cls,
-                          fn_name=None,
+                          implements=None,
                           symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
-        # if fn_name is not None:
-        #     _OperatorsFactory.register_op(fn_name, cls)
+        if implements is not None:
+            _registry.register_functional(implements, cls)
 
     @property
     def next_ops(self):
@@ -60,10 +57,14 @@ class Operator:
         self._var_ref = weakref.ref(value)
 
     def forward(self, *args):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"forward pass for {self.__class__.__name__} has not been"
+            " implemented")
 
     def backward(self, grad_output: variable.Variable):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"backward pass for {self.__class__.__name__} has not been"
+            " implemented")
 
     @classmethod
     def apply(cls, *args):

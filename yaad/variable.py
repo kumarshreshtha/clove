@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 import warnings
 
-from yaad.autodiff import engine
+from yaad import autodiff
+from yaad import _registry
 
 if TYPE_CHECKING:
     from yaad import operator
@@ -9,6 +10,18 @@ if TYPE_CHECKING:
 
 class Variable:
     """Container class for a variable and it's gradient."""
+
+    FUNCTION_ASSOCIATIONS = dict(
+        __add__=_registry.FunctionNames.ADD,
+        __radd__=_registry.FunctionNames.ADD,
+        __mul__=_registry.FunctionNames.MULTIPLY,
+        __rmul__=_registry.FunctionNames.MULTIPLY,
+    )
+
+    def __new__(cls, *args, **kwargs):
+        # TODO: check that the function associations have been realized before
+        # init.
+        return super().__new__(cls)
 
     def __init__(self,
                  data,
@@ -58,7 +71,7 @@ class Variable:
         return self.op is None
 
     def backward(self, grad_output=None, retain_graph=False):
-        engine.backward(self, grad_output, retain_graph)
+        autodiff.backward(self, grad_output, retain_graph)
 
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
