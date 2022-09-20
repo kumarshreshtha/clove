@@ -79,7 +79,7 @@ class Operator:
         if requires_grad:
             for arg in args:
                 if prop_grad(arg):
-                    op = LeafOp(arg) if arg.op is None else arg.op
+                    op = _LeafOp(arg) if arg.op is None else arg.op
                     children.append(op)
                 else:
                     children.append(None)
@@ -115,7 +115,7 @@ class Operator:
     #     var_repr = if var is not None
 
 
-class LeafOp(Operator, symbol="leaf"):
+class _LeafOp(Operator, symbol="leaf"):
 
     def __init__(self, variable: variable.Variable):
         super().__init__(variable=variable,

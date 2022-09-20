@@ -1,8 +1,8 @@
 from .grad_mode import set_grad_enabled, is_grad_enabled, no_grad
 from .variable import Variable
-from . import ops
 from . import autodiff
 from . import dot
+from . import _ops
 from . import _registry
 
 for __name, __op in _registry.walk_registry():
