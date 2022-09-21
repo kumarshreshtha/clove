@@ -17,6 +17,7 @@ class Variable:
         __mul__=_registry.FunctionNames.MULTIPLY,
         __rmul__=_registry.FunctionNames.MULTIPLY,
         __sub__=_registry.FunctionNames.SUBTRACT,
+        __rsub__=_registry.FunctionNames.SUBTRACT,
         __neg__=_registry.FunctionNames.NEGATE,
         __pow__=_registry.FunctionNames.POW
     )
