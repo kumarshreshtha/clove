@@ -23,11 +23,6 @@ class Variable:
 
     # TODO: array function dispatch once moved from scalers to arrays.
 
-    def __new__(cls, *args, **kwargs):
-        # TODO: check that the function associations have been realized before
-        # init.
-        return super().__new__(cls)
-
     def __init__(self,
                  data,
                  requires_grad=False,
@@ -80,12 +75,6 @@ class Variable:
 
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
-
-    def describe(self):
-        # TODO: returns pretty formatted self.name, self.data,
-        # self.requires_grad, self.is_leaf, if leaf and non None grad then
-        # grad.
-        ...
 
     def __repr__(self):
         grad_repr = f", requires_grad=True" if self.requires_grad else ""

@@ -14,8 +14,6 @@ class FunctionNames(str, enum.Enum):
     POW = "pow"
     SIGMOID = "sigmoid"
 
-# TODO: convert this to MutableMapping
-
 
 class _FunctionTable(collections.abc.MutableMapping):
     def __init__(self):
