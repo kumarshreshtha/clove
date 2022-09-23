@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+import functools
 
 from typing import Dict, List, Optional, Sequence, Set, Union
 
@@ -136,3 +137,12 @@ def _autodiff(ordered_ops: List[operator.Operator],
     if ordered_ops:
         _autodiff(ordered_ops, retain_graph, populate_grad, inputs, grad_map)
     return grad_map
+
+
+def grad_fn(fn, argnums: Union[int, Sequence[int]] = 0):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        out = fn(*args, **kwargs)
+        derivative = grad(out, [args[n] for n in argnums], True, True)
+        return derivative
+    return wrapper

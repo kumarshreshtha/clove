@@ -111,10 +111,25 @@ class SigmoidOp(operator.Operator,
                 implements=_registry.FunctionNames.SIGMOID,
                 symbol="<&sigma;>"):
     def forward(self, input: variable.Variable):
-        out = (1 + -input.exp())**-1
+        out = (1 + (-input).exp())**-1
         self.save_for_backward("out", out)
         return out
 
     def backward(self, grad_output: variable.Variable):
         out = self.saved_value("out")
         return grad_output * out * (1 - out)
+
+
+class TanhOp(operator.Operator,
+             implements=_registry.FunctionNames.TANH,
+             symbol="tanh"):
+    def forward(self, input: variable.Variable):
+        exp_inp = input.exp()
+        neg_exp_inp = (-input).exp()
+        out = (exp_inp - neg_exp_inp) / (exp_inp + neg_exp_inp)
+        self.save_for_backward("out", out)
+        return out
+
+    def backward(self, grad_output: variable.Variable):
+        out = self.saved_value("out")
+        return grad_output * (1 - out**2)

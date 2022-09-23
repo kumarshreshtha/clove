@@ -13,6 +13,7 @@ class FunctionNames(str, enum.Enum):
     EXP = "exp"
     POW = "pow"
     SIGMOID = "sigmoid"
+    TANH = "tanh"
 
 
 class _FunctionTable(collections.abc.MutableMapping):

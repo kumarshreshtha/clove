@@ -19,7 +19,9 @@ class Variable:
         __sub__=_registry.FunctionNames.SUBTRACT,
         __rsub__=_registry.FunctionNames.SUBTRACT,
         __neg__=_registry.FunctionNames.NEGATE,
-        __pow__=_registry.FunctionNames.POW
+        __pow__=_registry.FunctionNames.POW,
+        sigmoid=_registry.FunctionNames.SIGMOID,
+        tanh=_registry.FunctionNames.TANH
     )
 
     # TODO: array function dispatch once moved from scalers to arrays.
