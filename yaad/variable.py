@@ -21,6 +21,7 @@ class Variable:
         __neg__=_registry.FunctionNames.NEGATE,
         __pow__=_registry.FunctionNames.POW,
         sigmoid=_registry.FunctionNames.SIGMOID,
+        exp=_registry.FunctionNames.EXP,
         tanh=_registry.FunctionNames.TANH
     )
 

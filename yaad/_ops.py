@@ -96,7 +96,7 @@ class PowOp(operator.Operator,
             implements=_registry.FunctionNames.POW,
             symbol="**"):
     def forward(self, input: variable.Variable, other: numbers.Number):
-        out = input.data**other
+        out = variable.Variable(input.data**other)
         self.save_for_backward("input", input)
         self.save_for_backward("other", other)
         return out
