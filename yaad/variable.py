@@ -17,7 +17,6 @@ class Variable:
         __mul__=_registry.FunctionNames.MULTIPLY,
         __rmul__=_registry.FunctionNames.MULTIPLY,
         __sub__=_registry.FunctionNames.SUBTRACT,
-        __rsub__=_registry.FunctionNames.SUBTRACT,
         __neg__=_registry.FunctionNames.NEGATE,
         __pow__=_registry.FunctionNames.POW,
         sigmoid=_registry.FunctionNames.SIGMOID,
@@ -70,6 +69,9 @@ class Variable:
         if self.is_leaf():
             return
         self._retains_grad = True
+
+    def __rsub__(self, other):
+        return other + (-self)
 
     def is_leaf(self):
         return self.op is None
