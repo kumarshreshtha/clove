@@ -4,9 +4,9 @@ import math
 import numbers
 from typing import Optional, Union
 
-from yaad import operator
-from yaad import variable
-from yaad import _registry
+from clove import operator
+from clove import variable
+from clove import _registry
 
 
 def is_number(input):

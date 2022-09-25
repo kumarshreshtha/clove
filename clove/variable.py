@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, Optional
 import warnings
 
-from yaad import autodiff
-from yaad import _registry
+from clove import autodiff
+from clove import _registry
 
 if TYPE_CHECKING:
-    from yaad import operator
+    from clove import operator
 
 
 class Variable:

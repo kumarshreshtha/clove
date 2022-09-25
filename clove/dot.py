@@ -1,7 +1,7 @@
 import graphviz
 
-from yaad import operator
-from yaad import variable
+from clove import operator
+from clove import variable
 
 
 NODE_ATTR = dict(align="left",

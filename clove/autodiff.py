@@ -4,9 +4,9 @@ import functools
 
 from typing import Dict, List, Optional, Sequence, Set, Union
 
-from yaad import grad_mode
-from yaad import operator
-from yaad import variable
+from clove import grad_mode
+from clove import operator
+from clove import variable
 
 
 def _topological_order(root: Optional[operator.Operator],

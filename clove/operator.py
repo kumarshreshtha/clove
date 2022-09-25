@@ -5,10 +5,10 @@ from typing import Optional, Sequence, Union
 import weakref
 
 
-from yaad import grad_mode
-from yaad import _registry
+from clove import grad_mode
+from clove import _registry
 
-from yaad import variable
+from clove import variable
 
 
 def prop_grad(inp):
