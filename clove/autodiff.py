@@ -20,7 +20,7 @@ def _topological_order(root: Optional[operator.Operator],
     if root in _visited:
         return _order
     _visited.add(root)
-    for op in root._children:
+    for op in root.next_ops:
         _order = _topological_order(op, required_ops, _order, _visited)
     _order.append(root)
     return _order
