@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import math
 import numbers
+import numpy as np
 from typing import Optional, Union
 
 from clove import operator
@@ -84,7 +84,7 @@ class ExpOp(operator.Operator,
             implements=_registry.FunctionNames.EXP,
             symbol="exp"):
     def forward(self, input: variable.Variable):
-        out = variable.Variable(math.exp(input.data))
+        out = variable.Variable(np.exp(input.data))
         self.save_for_backward("out", out)
         return out
 

@@ -1,5 +1,8 @@
+import numbers
 from typing import TYPE_CHECKING, Optional
 import warnings
+
+import numpy as np
 
 from clove import autodiff
 from clove import _registry
@@ -30,6 +33,8 @@ class Variable:
                  data,
                  requires_grad=False,
                  name: str = None):
+        if isinstance(data, numbers.Number):
+            data = np.array([data])
         self._data = data
         self._grad = None
         self.requires_grad = requires_grad
