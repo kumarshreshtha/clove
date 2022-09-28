@@ -17,7 +17,7 @@ class CloneOp(operator.Operator,
               implements=_registry.FunctionNames.CLONE,
               symbol="clone"):
     def forward(self, input: variable.Variable):
-        return input.data
+        return variable.Variable(input.data.copy())
 
     def backward(self, grad_output: variable.Variable):
         return grad_output
@@ -35,8 +35,6 @@ class AddOp(operator.Operator,
         return variable.Variable(input_data + other_data)
 
     def backward(self, grad_output: Optional[variable.Variable]):
-        if grad_output is None:
-            return None, None
         return grad_output, grad_output
 
 
@@ -57,6 +55,27 @@ class MulOp(operator.Operator,
         input = self.saved_value("input")
         grad_input = other * grad_output
         grad_other = input * grad_output
+        return grad_input, grad_other
+
+
+class MatmulOp(operator.Operator,
+               implements=_registry.FunctionNames.MATMUL,
+               symbol="@"):
+
+    def forward(self,
+                input: variable.Variable,
+                other: variable.Variable):
+        input_data = input if is_number(input) else input.data
+        other_data = other if is_number(other) else other.data
+        self.save_for_backward("other", other)
+        self.save_for_backward("input", input)
+        return variable.Variable(input_data @ other_data)
+
+    def backward(self, grad_output: variable.Variable):
+        other = self.saved_value("other")
+        input = self.saved_value("input")
+        grad_input = grad_output @ other
+        grad_other = grad_output @ input
         return grad_input, grad_other
 
 
@@ -104,7 +123,7 @@ class PowOp(operator.Operator,
     def backward(self, grad_output: variable.Variable):
         other = self.saved_value("other")
         input = self.saved_value("input")
-        return other * input**(other - 1) * grad_output
+        return grad_output @ (other * input**(other - 1))
 
 
 class SigmoidOp(operator.Operator,
@@ -117,7 +136,9 @@ class SigmoidOp(operator.Operator,
 
     def backward(self, grad_output: variable.Variable):
         out = self.saved_value("out")
-        return grad_output * out * (1 - out)
+        print(out)
+        print(grad_output)
+        return grad_output @ (out * (1 - out))
 
 
 class TanhOp(operator.Operator,
@@ -132,4 +153,4 @@ class TanhOp(operator.Operator,
 
     def backward(self, grad_output: variable.Variable):
         out = self.saved_value("out")
-        return grad_output * (1 - out**2)
+        return grad_output @ (1 - out**2)

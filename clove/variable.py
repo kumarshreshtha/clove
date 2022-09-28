@@ -22,6 +22,7 @@ class Variable:
         __sub__=_registry.FunctionNames.SUBTRACT,
         __neg__=_registry.FunctionNames.NEGATE,
         __pow__=_registry.FunctionNames.POW,
+        __matmul__=_registry.FunctionNames.MATMUL,
         sigmoid=_registry.FunctionNames.SIGMOID,
         exp=_registry.FunctionNames.EXP,
         tanh=_registry.FunctionNames.TANH

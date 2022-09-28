@@ -83,6 +83,8 @@ def grad(outputs: Union[variable.Variable, Sequence[variable.Variable]],
             f" lengths {len(grad_outputs)} and {len(outputs)} instead. ")
     with grad_mode.set_grad_enabled(create_graph):
         for i, (out, g_out) in enumerate(zip(outputs, grad_outputs)):
+            # TODO: need to check output shapes, only make default gradients
+            # for scalars.
             grad_outputs[i] = (
                 variable.Variable(1., requires_grad=create_graph)
                 if g_out is None else g_out)
