@@ -99,7 +99,7 @@ class Operator:
         self._cache.clear()
 
     def save_for_backward(self, name, value):
-        self._cache[name] = value
+        self._cache[name] = value if prop_grad(value) else None
 
     def saved_value(self, name):
         if name not in self._cache:

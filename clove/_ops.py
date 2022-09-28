@@ -13,6 +13,20 @@ def is_number(input):
     return isinstance(input, numbers.Number)
 
 
+def get_data(array: Union[variable.Variable, np.ndarray, numbers.Number]):
+    if isinstance(array, variable.Variable):
+        return array.data
+    return array
+
+# TODO: update function signatures automatically from numpy docs.
+# TODO: maybe change implements from enum to np functions?
+# Downside? doesn't have an equivalent function name for non numpy functions.
+# define them separatly (under ml ops maybe?) and add their associations manually?
+# change implements to overloads.
+# add additional array_op? to make sure variable.Variable overrides it?
+# Once this is done can use array ops directly.
+
+
 class CloneOp(operator.Operator,
               implements=_registry.FunctionNames.CLONE,
               symbol="clone"):
@@ -30,9 +44,7 @@ class AddOp(operator.Operator,
                 input: variable.Variable,
                 other: Union[variable.Variable, numbers.Number]):
         """Adds two nodes or a node and a number."""
-        input_data = input if is_number(input) else input.data
-        other_data = other if is_number(other) else other.data
-        return variable.Variable(input_data + other_data)
+        return variable.Variable(np.add(get_data(input), get_data(other)))
 
     def backward(self, grad_output: Optional[variable.Variable]):
         return grad_output, grad_output
@@ -44,38 +56,37 @@ class MulOp(operator.Operator,
     def forward(self,
                 input: variable.Variable,
                 other: variable.Variable):
-        input_data = input if is_number(input) else input.data
-        other_data = other if is_number(other) else other.data
         self.save_for_backward("other", other)
         self.save_for_backward("input", input)
-        return variable.Variable(input_data * other_data)
+        return variable.Variable(np.multiply(get_data(input), get_data(other)))
 
     def backward(self, grad_output: variable.Variable):
         other = self.saved_value("other")
         input = self.saved_value("input")
-        grad_input = other * grad_output
-        grad_other = input * grad_output
+        grad_input = MulOp.apply(
+            other, grad_output) if other is not None else None
+        grad_other = MulOp.apply(
+            input, grad_output) if input is not None else None
         return grad_input, grad_other
+
+# TODO: verify this
 
 
 class MatmulOp(operator.Operator,
                implements=_registry.FunctionNames.MATMUL,
                symbol="@"):
-
     def forward(self,
                 input: variable.Variable,
                 other: variable.Variable):
-        input_data = input if is_number(input) else input.data
-        other_data = other if is_number(other) else other.data
         self.save_for_backward("other", other)
         self.save_for_backward("input", input)
-        return variable.Variable(input_data @ other_data)
+        return variable.Variable(np.matmul(get_data(input), get_data(other)))
 
     def backward(self, grad_output: variable.Variable):
         other = self.saved_value("other")
         input = self.saved_value("input")
-        grad_input = grad_output @ other
-        grad_other = grad_output @ input
+        grad_input = other * grad_output if other is not None else None
+        grad_other = input * grad_output if input is not None else None
         return grad_input, grad_other
 
 
@@ -83,39 +94,40 @@ class NegOp(operator.Operator,
             implements=_registry.FunctionNames.NEGATE,
             symbol="-1*"):
     def forward(self, input):
-        return input * -1
+        return variable.Variable(np.negative(get_data(input)))
 
     def backward(self, grad_output):
-        return -grad_output
+        return NegOp.apply(grad_output)
 
 
 class MinusOp(operator.Operator,
               implements=_registry.FunctionNames.SUBTRACT,
               symbol="-"):
     def forward(self, input, other):
-        return input + (-other)
+        return variable.Variable(np.subtract(get_data(input), get_data(other)))
 
     def backward(self, grad_output: variable.Variable):
-        return grad_output, -grad_output
+        return grad_output, NegOp.apply(grad_output)
 
 
 class ExpOp(operator.Operator,
             implements=_registry.FunctionNames.EXP,
             symbol="exp"):
     def forward(self, input: variable.Variable):
-        out = variable.Variable(np.exp(input.data))
+        out = variable.Variable(np.exp(get_data(input)))
         self.save_for_backward("out", out)
         return out
 
     def backward(self, grad_output):
-        return self.saved_value("out") * grad_output
+        out = self.saved_value("out")
+        return MulOp.apply(out, grad_output) if out is not None else None
 
 
 class PowOp(operator.Operator,
             implements=_registry.FunctionNames.POW,
             symbol="**"):
     def forward(self, input: variable.Variable, other: numbers.Number):
-        out = variable.Variable(input.data**other)
+        out = variable.Variable(np.power(get_data(input), get_data(other)))
         self.save_for_backward("input", input)
         self.save_for_backward("other", other)
         return out
@@ -123,7 +135,11 @@ class PowOp(operator.Operator,
     def backward(self, grad_output: variable.Variable):
         other = self.saved_value("other")
         input = self.saved_value("input")
-        return grad_output @ (other * input**(other - 1))
+        return MulOp.apply(
+            MulOp.apply(other, PowOp.apply(input, MinusOp.apply(other, 1))),
+            grad_output)
+
+# TODO: update this
 
 
 class SigmoidOp(operator.Operator,
@@ -145,12 +161,10 @@ class TanhOp(operator.Operator,
              implements=_registry.FunctionNames.TANH,
              symbol="tanh"):
     def forward(self, input: variable.Variable):
-        exp_inp = input.exp()
-        neg_exp_inp = (-input).exp()
-        out = (exp_inp - neg_exp_inp) / (exp_inp + neg_exp_inp)
+        out = variable.Variable(np.tanh(get_data(input)))
         self.save_for_backward("out", out)
         return out
 
     def backward(self, grad_output: variable.Variable):
         out = self.saved_value("out")
-        return grad_output @ (1 - out**2)
+        return MulOp.apply(MinusOp(1, PowOp.apply(out, 2), grad_output))

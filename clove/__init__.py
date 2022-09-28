@@ -5,6 +5,8 @@ from . import dot
 from . import _ops
 from . import _registry
 
+# TODO: overwrite array making functions.
+
 for __name, __op in _registry.walk_registry():
     globals()[__name] = _registry.make_fn(__name, __op)
 
