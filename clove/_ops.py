@@ -49,6 +49,8 @@ class AddOp(operator.Operator,
     def backward(self, grad_output: Optional[variable.Variable]):
         return grad_output, grad_output
 
+# TODO: can do better than the Nones.
+
 
 class MulOp(operator.Operator,
             implements=_registry.FunctionNames.MULTIPLY,
@@ -56,8 +58,10 @@ class MulOp(operator.Operator,
     def forward(self,
                 input: variable.Variable,
                 other: variable.Variable):
-        self.save_for_backward("other", other)
-        self.save_for_backward("input", input)
+        self.save_for_backward(
+            "other", other if operator.prop_grad(input) else None)
+        self.save_for_backward(
+            "input", input if operator.prop_grad(other) else None)
         return variable.Variable(np.multiply(get_data(input), get_data(other)))
 
     def backward(self, grad_output: variable.Variable):
@@ -115,7 +119,7 @@ class ExpOp(operator.Operator,
             symbol="exp"):
     def forward(self, input: variable.Variable):
         out = variable.Variable(np.exp(get_data(input)))
-        self.save_for_backward("out", out)
+        self.save_for_backward("out", out)  # TODO: add checks here too.
         return out
 
     def backward(self, grad_output):
@@ -139,22 +143,20 @@ class PowOp(operator.Operator,
             MulOp.apply(other, PowOp.apply(input, MinusOp.apply(other, 1))),
             grad_output)
 
-# TODO: update this
-
 
 class SigmoidOp(operator.Operator,
                 implements=_registry.FunctionNames.SIGMOID,
                 symbol="<&sigma;>"):
     def forward(self, input: variable.Variable):
+        PowOp.apply(AddOp.apply(1, ExpOp.apply(NegOp.apply(input))), -1)
         out = (1 + (-input).exp())**-1
         self.save_for_backward("out", out)
         return out
 
     def backward(self, grad_output: variable.Variable):
         out = self.saved_value("out")
-        print(out)
-        print(grad_output)
-        return grad_output @ (out * (1 - out))
+        return MulOp.apply(
+            MulOp.apply(out, MinusOp.apply(1, out)), grad_output)
 
 
 class TanhOp(operator.Operator,
