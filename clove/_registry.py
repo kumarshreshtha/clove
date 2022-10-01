@@ -15,6 +15,8 @@ class FunctionNames(str, enum.Enum):
     SIGMOID = "sigmoid"
     TANH = "tanh"
     MATMUL = "matmul"
+    TRANSPOSE = "transpose"
+    LOG = "log"
 
 
 class _FunctionTable(collections.abc.MutableMapping):
