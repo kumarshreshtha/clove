@@ -18,7 +18,17 @@ def get_data(array: Union[variable.Variable, np.ndarray, numbers.Number]):
         return array.data
     return array
 
-# TODO: update function signatures automatically from backend docs.
+# TODO: update function signatures automatically from backend docs?
+# maybe not, we want to keep control over what can be passed.
+# for instance no where or out args in numpy.
+# someone needs to define the signature. perhaps the registry?
+# but that means forward will be signature less. makes it complicated to cache
+
+# Final Design
+
+# forward defines signature and docs
+# registry defines what gets implemented
+# backend defines associations. (will need the signature from ops.)
 
 
 class CloneOp(operator.Operator,

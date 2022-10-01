@@ -27,32 +27,32 @@ class Operator:
         def update(self, grad: variable.Variable):
             self.value = self.value + grad if self.value is not None else grad
 
-    class Cache(dict):
-        requires_grad: bool
-
-        def __getattr__(self, name):
-            if name not in self:
-                raise RuntimeError(
-                    f"called backward on {self.__class__.__name__} after"
-                    " releasing the saved tensors. In order to call backward"
-                    " multiple times please set "
-                    "`retain_graph=True`.")
-            return self[name]
-
-        def __setattr__(self, name, value):
-            if not self.requires_grad:
-                return
-            self[name] = value
-
     def __init__(self,
                  children: Sequence[Operator] = (),
                  requires_grad: bool = False,
                  variable: variable.Variable = None):
+
+        cls_name = self.__class__.__name__
+
+        class Cache(dict):
+            def __getattr__(self, name):
+                if name not in self:
+                    raise RuntimeError(
+                        f"called backward on {cls_name} after"
+                        " releasing the saved tensors. In order to call"
+                        " backward multiple times please set "
+                        "`retain_graph=True`.")
+                return self[name]
+
+            def __setattr__(self, name, value):
+                if not requires_grad:
+                    return
+                self[name] = value
+
         self._children = tuple(children)
         self.requires_grad = requires_grad
         self._var_ref = weakref.ref(variable) if variable is not None else None
-        self._cache = self.Cache()
-        self._cache.requires_grad = requires_grad
+        self._cache = Cache()
         self.grad_store = self.GradStore()
 
     def __init_subclass__(

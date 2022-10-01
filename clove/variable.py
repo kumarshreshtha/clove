@@ -25,7 +25,8 @@ class Variable:
         __matmul__=_registry.FunctionNames.MATMUL,
         sigmoid=_registry.FunctionNames.SIGMOID,
         exp=_registry.FunctionNames.EXP,
-        tanh=_registry.FunctionNames.TANH
+        tanh=_registry.FunctionNames.TANH,
+        transpose=_registry.FunctionNames.TRANSPOSE
     )
 
     # TODO: array function dispatch once moved from scalers to arrays.
@@ -78,6 +79,10 @@ class Variable:
 
     def __rsub__(self, other):
         return other + (-self)
+
+    @property
+    def T(self):
+        return self.transpose()
 
     def is_leaf(self):
         return self.op is None
