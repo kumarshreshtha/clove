@@ -4,7 +4,7 @@ import functools
 import inspect
 
 
-class FunctionNames(str, enum.Enum):
+class Function(str, enum.Enum):
     ADD = "add"
     MULTIPLY = "multiply"
     NEGATE = "neg"
@@ -19,9 +19,21 @@ class FunctionNames(str, enum.Enum):
     LOG = "log"
 
 
+class CreationRoutines(str, enum.Enum):
+    ONES = "ones"
+    ZEROS = "zeros"
+    FULL = "full"
+
+    def register(cls, backend, fn):
+        ...
+
+    def get_fn(cls, backend):
+        ...
+
+
 class _FunctionTable(collections.abc.MutableMapping):
     def __init__(self):
-        self.__fn_names = frozenset(fn for fn in FunctionNames)
+        self.__fn_names = frozenset(fn for fn in Function)
         self.__associations = dict()
 
     def __setitem__(self, key, value) -> None:

@@ -57,8 +57,7 @@ class Operator:
 
     def __init_subclass__(
             cls,
-            implements: Union[_registry.FunctionNames,
-                              Sequence[_registry.FunctionNames], None] = None,
+            implements: _registry.Function,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
         if implements is not None:
@@ -85,7 +84,7 @@ class Operator:
             f"forward pass for {self.__class__.__name__} has not been"
             " implemented")
 
-    def backward(self, grad_output: variable.Variable):
+    def backward(self, grad_out: variable.Variable):
         raise NotImplementedError(
             f"backward pass for {self.__class__.__name__} has not been"
             " implemented")
