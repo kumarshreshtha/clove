@@ -1,3 +1,14 @@
+from .backend import backends, Backend, backend_from_name
 from . import numpy
 from . import cupy
-from .backend import get_backend, set_backend, backends, Backend
+
+__BACKEND = numpy.Numpy  # defaults to numpy.
+
+
+def set_backend(backend: str, /):
+    global __BACKEND
+    __BACKEND = backend_from_name(backend)
+
+
+def get_backend():
+    return __BACKEND

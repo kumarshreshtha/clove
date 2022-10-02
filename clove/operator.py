@@ -4,10 +4,9 @@ import dataclasses
 from typing import Optional, Sequence, Union
 import weakref
 
-
-from clove import grad_mode
 from clove import _registry
-
+from clove import backend
+from clove import grad_mode
 from clove import variable
 
 
@@ -111,10 +110,16 @@ class Operator:
     def clear_cache(self):
         self._cache.clear()
 
-    def fwd_fn(self):
-        # TODO: something like this:
-        # return _registry.fn_table[self.implements].fn()
-        ...
+# TODO: there has to be a mechanism to control function signature in backend.
+# Only way is to associate backend directly with ops.
+    @property
+    def fn(self):
+        bk = backend.get_backend()
+        associations = bk.fn_associations()
+        if not self.implements in associations:
+            raise NotImplementedError(
+                f"backend {bk.name} does not support {self.implements}")
+        return bk.fn_associations()[self.implements]
 
     # def __repr__(self):
     #     op_repr = f"Operator({self.__class__.__name__}[{self.symbol}])"

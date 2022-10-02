@@ -1,6 +1,14 @@
 import collections
 import enum
 
+# TODO: make this Function template more powerful.
+# We can define BinaryOps, UnaryOps etc to have definite signatures.
+# Likely a dataclass with signature, name etc.
+# then both backend fn and Op define associations to this signature for
+# for proper sync. the routing can be controlled by either Operator or
+# a middle man.
+
+
 class Function(str, enum.Enum):
     ADD = "add"
     MULTIPLY = "multiply"

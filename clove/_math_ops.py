@@ -13,22 +13,17 @@ def is_number(x):
     return isinstance(x, numbers.Number)
 
 
-def get_data(array: Union[variable.Variable, np.ndarray, numbers.Number]):
+def get_data(array: Union[variable.Variable, numbers.Number]):
     if isinstance(array, variable.Variable):
         return array.data
     return array
-
-# TODO: update function signatures automatically from backend docs?
-# maybe not, we want to keep control over what can be passed.
-# for instance no where or out args in numpy.
-# someone needs to define the signature. perhaps the registry?
-# but that means forward will be signature less. makes it complicated to cache
 
 # Final Design
 
 # forward defines signature and docs
 # registry defines what gets implemented
 # backend defines associations. (will need the signature from ops.)
+# must define associations directly with ops.
 
 
 class CloneOp(operator.Operator,
@@ -59,7 +54,7 @@ class AddOp(operator.Operator,
                 x1: variable.Variable,
                 x2: Union[variable.Variable, numbers.Number]):
         """Adds two nodes or a node and a number."""
-        return variable.Variable(np.add(get_data(x1), get_data(x2)))
+        return variable.Variable(self.fn(get_data(x1), get_data(x2)))
 
     def backward(self, grad_out: Optional[variable.Variable]):
         return grad_out, grad_out

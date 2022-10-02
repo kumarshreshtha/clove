@@ -6,6 +6,7 @@ _registry = dict()
 
 class Backend:
     def __init_subclass__(cls, name) -> None:
+        cls.name = name
         _registry[name] = cls
 
     @abc.abstractclassmethod
@@ -17,13 +18,11 @@ class Backend:
         ...
 
 
-def set_backend(backend, /):
-    ...
-
-
-def get_backend():
-    ...
-
-
 def backends():
     yield from _registry.items()
+
+
+def backend_from_name(name: str):
+    if not name in _registry:
+        raise ValueError(f"backend {name} is not registered.")
+    return _registry[name]
