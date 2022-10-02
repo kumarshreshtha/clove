@@ -15,21 +15,19 @@ class Variable:
     """Container class for a variable and it's gradient."""
 
     FUNCTION_ASSOCIATIONS = dict(
-        __add__=_registry.FunctionNames.ADD,
-        __radd__=_registry.FunctionNames.ADD,
-        __mul__=_registry.FunctionNames.MULTIPLY,
-        __rmul__=_registry.FunctionNames.MULTIPLY,
-        __sub__=_registry.FunctionNames.SUBTRACT,
-        __neg__=_registry.FunctionNames.NEGATE,
-        __pow__=_registry.FunctionNames.POW,
-        __matmul__=_registry.FunctionNames.MATMUL,
-        sigmoid=_registry.FunctionNames.SIGMOID,
-        exp=_registry.FunctionNames.EXP,
-        tanh=_registry.FunctionNames.TANH,
-        transpose=_registry.FunctionNames.TRANSPOSE
+        __add__=_registry.Function.ADD,
+        __radd__=_registry.Function.ADD,
+        __mul__=_registry.Function.MULTIPLY,
+        __rmul__=_registry.Function.MULTIPLY,
+        __sub__=_registry.Function.SUBTRACT,
+        __neg__=_registry.Function.NEGATE,
+        __pow__=_registry.Function.POW,
+        __matmul__=_registry.Function.MATMUL,
+        sigmoid=_registry.Function.SIGMOID,
+        exp=_registry.Function.EXP,
+        tanh=_registry.Function.TANH,
+        transpose=_registry.Function.TRANSPOSE
     )
-
-    # TODO: array function dispatch once moved from scalers to arrays.
 
     def __init__(self,
                  data,

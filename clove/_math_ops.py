@@ -32,7 +32,7 @@ def get_data(array: Union[variable.Variable, np.ndarray, numbers.Number]):
 
 
 class CloneOp(operator.Operator,
-              implements=_registry.FunctionNames.CLONE,
+              implements=_registry.Function.CLONE,
               symbol="clone"):
     def forward(self, x: variable.Variable):
         return variable.Variable(x.data.copy())
@@ -42,7 +42,7 @@ class CloneOp(operator.Operator,
 
 
 class TransposeOp(operator.Operator,
-                  implements=_registry.FunctionNames.TRANSPOSE,
+                  implements=_registry.Function.TRANSPOSE,
                   symbol="T"):
 
     def forward(self, x: variable.Variable):
@@ -53,7 +53,7 @@ class TransposeOp(operator.Operator,
 
 
 class AddOp(operator.Operator,
-            implements=_registry.FunctionNames.ADD,
+            implements=_registry.Function.ADD,
             symbol="+"):
     def forward(self,
                 x1: variable.Variable,
@@ -66,7 +66,7 @@ class AddOp(operator.Operator,
 
 
 class MulOp(operator.Operator,
-            implements=_registry.FunctionNames.MULTIPLY,
+            implements=_registry.Function.MULTIPLY,
             symbol="<&times;>"):
     def forward(self,
                 x1: variable.Variable,
@@ -83,7 +83,7 @@ class MulOp(operator.Operator,
 
 
 class MatmulOp(operator.Operator,
-               implements=_registry.FunctionNames.MATMUL,
+               implements=_registry.Function.MATMUL,
                symbol="@"):
     def forward(self,
                 x1: variable.Variable,
@@ -102,7 +102,7 @@ class MatmulOp(operator.Operator,
 
 
 class NegOp(operator.Operator,
-            implements=_registry.FunctionNames.NEGATE,
+            implements=_registry.Function.NEGATE,
             symbol="-1*"):
     def forward(self, x):
         return variable.Variable(np.negative(get_data(x)))
@@ -112,7 +112,7 @@ class NegOp(operator.Operator,
 
 
 class MinusOp(operator.Operator,
-              implements=_registry.FunctionNames.SUBTRACT,
+              implements=_registry.Function.SUBTRACT,
               symbol="-"):
     def forward(self, x1, x2):
         return variable.Variable(np.subtract(get_data(x1), get_data(x2)))
@@ -122,7 +122,7 @@ class MinusOp(operator.Operator,
 
 
 class ExpOp(operator.Operator,
-            implements=_registry.FunctionNames.EXP,
+            implements=_registry.Function.EXP,
             symbol="exp"):
     def forward(self, x: variable.Variable):
         out = variable.Variable(np.exp(get_data(x)))
@@ -135,7 +135,7 @@ class ExpOp(operator.Operator,
 
 
 class LogOp(operator.Operator,
-            implements=_registry.FunctionNames.LOG,
+            implements=_registry.Function.LOG,
             symbol="ln"):
     def forward(self, x: variable.Variable):
         self._cache.x = x if self.requires_grad else None
@@ -149,7 +149,7 @@ class LogOp(operator.Operator,
 
 
 class PowOp(operator.Operator,
-            implements=_registry.FunctionNames.POW,
+            implements=_registry.Function.POW,
             symbol="**"):
     def forward(self, x1: variable.Variable, x2: variable.Variable):
         out = variable.Variable(np.power(get_data(x1), get_data(x2)))
@@ -173,7 +173,7 @@ class PowOp(operator.Operator,
 
 
 class SigmoidOp(operator.Operator,
-                implements=_registry.FunctionNames.SIGMOID,
+                implements=_registry.Function.SIGMOID,
                 symbol="<&sigma;>"):
     def forward(self, x: variable.Variable):
         out = PowOp.apply(AddOp.apply(1, ExpOp.apply(NegOp.apply(x))), -1)
@@ -187,7 +187,7 @@ class SigmoidOp(operator.Operator,
 
 
 class TanhOp(operator.Operator,
-             implements=_registry.FunctionNames.TANH,
+             implements=_registry.Function.TANH,
              symbol="tanh"):
     def forward(self, x: variable.Variable):
         out = variable.Variable(np.tanh(get_data(x)))

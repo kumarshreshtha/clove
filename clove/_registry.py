@@ -1,8 +1,5 @@
 import collections
 import enum
-import functools
-import inspect
-
 
 class Function(str, enum.Enum):
     ADD = "add"
@@ -17,18 +14,6 @@ class Function(str, enum.Enum):
     MATMUL = "matmul"
     TRANSPOSE = "transpose"
     LOG = "log"
-
-
-class CreationRoutines(str, enum.Enum):
-    ONES = "ones"
-    ZEROS = "zeros"
-    FULL = "full"
-
-    def register(cls, backend, fn):
-        ...
-
-    def get_fn(cls, backend):
-        ...
 
 
 class _FunctionTable(collections.abc.MutableMapping):
@@ -63,39 +48,3 @@ def register_operator(name, op):
 
 def walk_registry():
     yield from fn_table.items()
-
-
-def _bind_free_vars(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    return wrapper
-
-
-def _copy_op(name, op):
-    new_fn = _bind_free_vars(op.apply)
-    new_fn.__doc__ = op.forward.__doc__
-    new_fn.__annotations__ = op.forward.__annotations__
-    new_fn.__defaults__ = op.forward.__defaults__
-    new_fn.__name__ = name
-    return new_fn
-
-
-def make_fn(name, op):
-    new_fn = _copy_op(name, op)
-    sig = inspect.signature(op.forward)
-    new_sig = sig.replace(
-        parameters=[param for param in sig.parameters.values()
-                    if param.name != "self"])
-    new_fn.__signature__ = new_sig
-    return new_fn
-
-
-def make_method(name, op):
-    new_fn = _copy_op(name, op)
-    sig = inspect.signature(op.forward)
-    new_sig = sig.replace(
-        parameters=[param for param in sig.parameters.values()
-                    if param.name != "input"])
-    new_fn.__signature__ = new_sig
-    return new_fn

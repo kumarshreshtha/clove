@@ -16,7 +16,6 @@ def prop_grad(inp):
 
 
 class Operator:
-
     @dataclasses.dataclass
     class GradStore:
         value: Optional[variable.Variable] = None
@@ -60,12 +59,9 @@ class Operator:
             implements: _registry.Function,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
+        cls.implements = implements
         if implements is not None:
-            if isinstance(implements, (list, tuple)):
-                for fn_name in implements:
-                    _registry.register_operator(fn_name, cls)
-            else:
-                _registry.register_operator(implements, cls)
+            _registry.register_operator(implements, cls)
 
     @property
     def next_ops(self):
@@ -115,13 +111,18 @@ class Operator:
     def clear_cache(self):
         self._cache.clear()
 
+    def fwd_fn(self):
+        # TODO: something like this:
+        # return _registry.fn_table[self.implements].fn()
+        ...
+
     # def __repr__(self):
     #     op_repr = f"Operator({self.__class__.__name__}[{self.symbol}])"
     #     var = self.variable
     #     var_repr = if var is not None
 
 
-class _LeafOp(Operator, symbol="leaf"):
+class _LeafOp(Operator, implements=None, symbol="leaf"):
 
     def __init__(self, variable: variable.Variable):
         super().__init__(variable=variable,
