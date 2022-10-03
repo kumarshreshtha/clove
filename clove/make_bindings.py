@@ -1,10 +1,11 @@
 import collections
 import functools
 import inspect
+import types
 from typing import Optional
 
+from clove import _backend
 from clove import operator
-from clove import backend
 from clove import variable
 
 
@@ -62,31 +63,32 @@ def update_signature(sig: inspect.Signature) -> inspect.Signature:
                        return_annotation=variable.Variable)
 
 
-def make_creation_op(fn):
+def creation_op_wrapper(fn):
     @functools.wraps(fn)
-    def wrapper(*args, requires_grad=False, name=None, **kwargs):
+    def runner(*args, requires_grad=False, name=None, **kwargs):
         data = fn(*args, **kwargs)
         return variable.Variable(data, requires_grad=requires_grad, name=name)
 
-    sig = update_signature(inspect.signature(fn))
-    wrapper.__signature__ = sig
-    wrapper.__doc__ = fn.__doc__
-    wrapper.__name__ = fn.__name__
-    wrapper.__defaults__ = tuple(
-        param.default for param in sig.parameters.values()
-        if param.default is not inspect.Parameter.empty)
-    wrapper.__annotations__ = {
-        param.name: param.annotation for param in sig.parameters.values()
-    }
-    return wrapper
+    if not isinstance(fn, types.BuiltinFunctionType):
+        try:
+            sig = update_signature(inspect.signature(fn))
+            runner.__signature__ = sig
+            runner.__defaults__ = tuple(
+                param.default for param in sig.parameters.values()
+                if param.default is not inspect.Parameter.empty)
+            runner.__annotations__ = {param.name: param.annotation
+                                      for param in sig.parameters.values()}
+        except ValueError:
+            return runner
+    return runner
 
 
-def bind_creation_ops():
+def make_creation_ops():
     ops = collections.defaultdict(dict)
-    for bk_name, bk in backend.backends():
-        bk: backend.Backend
-        for op in bk.creation_ops():
-            ops[bk_name][op.__name__] = make_creation_op(op)
+    for bk_name, bk in _backend.backends():
+        bk: _backend.Backend
+        for op in bk.creation_routines():
+            ops[bk_name][op.__name__] = creation_op_wrapper(op)
     return ops
 
 

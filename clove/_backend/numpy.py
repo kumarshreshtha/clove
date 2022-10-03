@@ -1,7 +1,7 @@
 import numpy as np
 
 from clove import _registry
-from clove.backend import backend
+from clove._backend import backend
 
 
 class Numpy(backend.Backend, name="numpy"):
@@ -24,7 +24,6 @@ class Numpy(backend.Backend, name="numpy"):
             np.asanyarray,
             np.ascontiguousarray,
             np.frombuffer,
-            np.from_dlpack,
             np.fromfile,
             np.fromfunction,
             np.fromiter,

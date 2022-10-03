@@ -4,8 +4,8 @@ import dataclasses
 from typing import Optional, Sequence, Union
 import weakref
 
+from clove import _backend
 from clove import _registry
-from clove import backend
 from clove import grad_mode
 from clove import variable
 
@@ -114,7 +114,7 @@ class Operator:
 # Only way is to associate backend directly with ops.
     @property
     def fn(self):
-        bk = backend.get_backend()
+        bk = _backend.get_backend()
         associations = bk.fn_associations()
         if not self.implements in associations:
             raise NotImplementedError(

@@ -1,4 +1,4 @@
-from .backend import backends, Backend, backend_from_name
+from .backend import backends, Backend, backend_from_name, has_backend
 from . import numpy
 from . import cupy
 

@@ -10,7 +10,7 @@ class Backend:
         _registry[name] = cls
 
     @abc.abstractclassmethod
-    def creation_ops(cls) -> Sequence[Callable]:
+    def creation_routines(cls) -> Sequence[Callable]:
         ...
 
     @abc.abstractclassmethod
@@ -26,3 +26,7 @@ def backend_from_name(name: str):
     if not name in _registry:
         raise ValueError(f"backend {name} is not registered.")
     return _registry[name]
+
+
+def has_backend(name: str):
+    name in _registry
