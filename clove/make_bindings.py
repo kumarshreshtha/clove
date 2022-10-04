@@ -65,21 +65,52 @@ def update_signature(sig: inspect.Signature) -> inspect.Signature:
 
 def creation_op_wrapper(fn):
     @functools.wraps(fn)
-    def runner(*args, requires_grad=False, name=None, **kwargs):
+    def runner(*args,
+               requires_grad: bool = False,
+               name: Optional[str] = None,
+               **kwargs):
+        args = list(args)
+        for i, arg in enumerate(args):
+            if isinstance(arg, variable.Variable):
+                args[i] = arg.data
+        for k, v in kwargs.items():
+            if isinstance(v, variable.Variable):
+                kwargs[k] = v.data
         data = fn(*args, **kwargs)
         return variable.Variable(data, requires_grad=requires_grad, name=name)
 
     if not isinstance(fn, types.BuiltinFunctionType):
         try:
             sig = update_signature(inspect.signature(fn))
+        except ValueError:
+            sig = None
+        if not sig is None:
             runner.__signature__ = sig
             runner.__defaults__ = tuple(
                 param.default for param in sig.parameters.values()
                 if param.default is not inspect.Parameter.empty)
             runner.__annotations__ = {param.name: param.annotation
                                       for param in sig.parameters.values()}
-        except ValueError:
-            return runner
+    doc = runner.__doc__
+    new_doc = f"""
+    {runner.__name__}(*args, requires_grad=False, name=None, **kwargs)
+
+    clove args:
+
+        requires_grad (bool) : When true, the variable is marked as
+            differentiable and it's computation graphs are tracked.
+
+        name (Optional[str]) : Optional name for the variable. The variable
+            is identified with this name in computation graph visualizations
+            with `clove.make_dot()`.
+
+    Backend Docs:
+
+    {doc}
+    """
+
+    runner.__doc__ = new_doc
+
     return runner
 
 

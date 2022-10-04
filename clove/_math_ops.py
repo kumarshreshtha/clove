@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numbers
-import numpy as np
 from typing import Optional, Union
 
 from clove import operator
@@ -18,19 +17,12 @@ def get_data(array: Union[variable.Variable, numbers.Number]):
         return array.data
     return array
 
-# Final Design
-
-# forward defines signature and docs
-# registry defines what gets implemented
-# backend defines associations. (will need the signature from ops.)
-# must define associations directly with ops.
-
 
 class CloneOp(operator.Operator,
               implements=_registry.Function.CLONE,
               symbol="clone"):
     def forward(self, x: variable.Variable):
-        return variable.Variable(x.data.copy())
+        return variable.Variable(self.fn(get_data(x)))
 
     def backward(self, grad_out: variable.Variable):
         return grad_out
@@ -41,7 +33,7 @@ class TransposeOp(operator.Operator,
                   symbol="T"):
 
     def forward(self, x: variable.Variable):
-        return variable.Variable(get_data(x).T)
+        return variable.Variable(self.fn(get_data(x)))
 
     def backward(self, grad_out: variable.Variable):
         return TransposeOp.apply(grad_out)
@@ -68,7 +60,7 @@ class MulOp(operator.Operator,
                 x2: variable.Variable):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
-        return variable.Variable(np.multiply(get_data(x1), get_data(x2)))
+        return variable.Variable(self.fn(get_data(x1), get_data(x2)))
 
     def backward(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
@@ -85,7 +77,7 @@ class MatmulOp(operator.Operator,
                 x2: variable.Variable):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
-        return variable.Variable(np.matmul(get_data(x1), get_data(x2)))
+        return variable.Variable(self.fn(get_data(x1), get_data(x2)))
 
     def backward(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
@@ -100,7 +92,7 @@ class NegOp(operator.Operator,
             implements=_registry.Function.NEGATE,
             symbol="-1*"):
     def forward(self, x):
-        return variable.Variable(np.negative(get_data(x)))
+        return variable.Variable(self.fn(get_data(x)))
 
     def backward(self, grad_out):
         return NegOp.apply(grad_out)
@@ -110,7 +102,7 @@ class MinusOp(operator.Operator,
               implements=_registry.Function.SUBTRACT,
               symbol="-"):
     def forward(self, x1, x2):
-        return variable.Variable(np.subtract(get_data(x1), get_data(x2)))
+        return variable.Variable(self.fn(get_data(x1), get_data(x2)))
 
     def backward(self, grad_out: variable.Variable):
         return grad_out, NegOp.apply(grad_out)
@@ -120,7 +112,7 @@ class ExpOp(operator.Operator,
             implements=_registry.Function.EXP,
             symbol="exp"):
     def forward(self, x: variable.Variable):
-        out = variable.Variable(np.exp(get_data(x)))
+        out = variable.Variable(self.fn(get_data(x)))
         self._cache.out = out if self.requires_grad else None
         return out
 
@@ -134,7 +126,7 @@ class LogOp(operator.Operator,
             symbol="ln"):
     def forward(self, x: variable.Variable):
         self._cache.x = x if self.requires_grad else None
-        out = variable.Variable(np.log(get_data(x)))
+        out = variable.Variable(self.fn(get_data(x)))
         return out
 
     def backward(self, grad_out: variable.Variable):
@@ -147,7 +139,7 @@ class PowOp(operator.Operator,
             implements=_registry.Function.POW,
             symbol="**"):
     def forward(self, x1: variable.Variable, x2: variable.Variable):
-        out = variable.Variable(np.power(get_data(x1), get_data(x2)))
+        out = variable.Variable(self.fn(get_data(x1), get_data(x2)))
         self._cache.x1 = (
             x1 if operator.prop_grad(x1) or operator.prop_grad(x2) else None)
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
@@ -171,7 +163,7 @@ class SigmoidOp(operator.Operator,
                 implements=_registry.Function.SIGMOID,
                 symbol="<&sigma;>"):
     def forward(self, x: variable.Variable):
-        out = PowOp.apply(AddOp.apply(1, ExpOp.apply(NegOp.apply(x))), -1)
+        out = variable.Variable(self.fn(get_data(x)))
         self._cache.out = out if operator.prop_grad(x) else None
         return out
 
@@ -185,7 +177,7 @@ class TanhOp(operator.Operator,
              implements=_registry.Function.TANH,
              symbol="tanh"):
     def forward(self, x: variable.Variable):
-        out = variable.Variable(np.tanh(get_data(x)))
+        out = variable.Variable(self.fn(get_data(x)))
         self._cache.out = out if operator.prop_grad(x) else None
         return out
 

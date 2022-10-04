@@ -7,9 +7,6 @@ from . import _registry
 from . import _backend
 from . import make_bindings
 
-# TODO: define set_backend at this level. it will remove all the creation
-# ops from globals and replace them with the other ones.
-
 for __name, __op in _registry.walk_registry():
     globals()[__name] = make_bindings.make_fn(__name, __op)
 
