@@ -1,5 +1,8 @@
 import collections
+import dataclasses
 import enum
+import inspect
+from typing import Tuple
 
 # TODO: make this Function template more powerful.
 # We can define BinaryOps, UnaryOps etc to have definite signatures.
@@ -9,7 +12,41 @@ import enum
 # a middle man.
 
 
+@dataclasses.dataclass
+class OperatorDefinition:
+    name: str
+    signature: inspect.Signature
+    op = None
+    backend = None
+
+    def register_computation_op(
+            op, keyword_mapping=None, positional_reordering=None):
+        ...
+
+    def register_differentiation_op(self, op):
+        # Test here that the signatures are identical
+        # But this requires knowledge about the op structure. Namely, that op
+        # apply and forward.
+        ...
+
+    def compute(self, *args, **kwargs):
+        ...
+
+
+STANDARD_BINARY_SIGNATURE = ""
+STANDARD_UNARY_SIGNATURE = ""
+
+
+class UnaryOp:
+    ...
+
+
+class UnaryOpOnAxis:
+    ...
+
+
 class Function(str, enum.Enum):
+    # ADD = OperatorDefinition(name="add", signature=BINARY_SIGNATURE)
     ADD = "add"
     MULTIPLY = "multiply"
     NEGATE = "neg"

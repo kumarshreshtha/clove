@@ -1,8 +1,5 @@
-import numbers
 from typing import TYPE_CHECKING, Optional
 import warnings
-
-import numpy as np
 
 from clove import autodiff
 from clove import _registry
@@ -10,11 +7,15 @@ from clove import _registry
 if TYPE_CHECKING:
     from clove import operator
 
+# TODO: variable should have properties dtype, shape, size, numel etc
+# must form associations with the backend and not access them directly.
+# as that might brake the compatibility with backend.
+
 
 class Variable:
     """Container class for a variable and it's gradient."""
 
-    FUNCTION_ASSOCIATIONS = dict(
+    METHODS_FROM_REGISTRY = dict(
         __add__=_registry.Function.ADD,
         __radd__=_registry.Function.ADD,
         __mul__=_registry.Function.MULTIPLY,
@@ -33,8 +34,7 @@ class Variable:
                  data,
                  requires_grad=False,
                  name: str = None):
-        if isinstance(data, numbers.Number):
-            data = np.array([data])
+
         self._data = data
         self._grad = None
         self.requires_grad = requires_grad

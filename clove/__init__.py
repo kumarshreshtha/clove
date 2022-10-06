@@ -10,7 +10,7 @@ from . import make_bindings
 for __name, __op in _registry.walk_registry():
     globals()[__name] = make_bindings.make_fn(__name, __op)
 
-for __method_name, __fn_name in Variable.FUNCTION_ASSOCIATIONS.items():
+for __method_name, __fn_name in Variable.METHODS_FROM_REGISTRY.items():
     if __fn_name in _registry.fn_table:
         setattr(Variable,
                 __method_name,
