@@ -1,64 +1,95 @@
+from __future__ import annotations
+
 import collections
 import dataclasses
-import enum
 import inspect
-from typing import Tuple
+import numbers
+from typing import Callable, Dict, Union
 
-# TODO: make this Function template more powerful.
-# We can define BinaryOps, UnaryOps etc to have definite signatures.
-# Likely a dataclass with signature, name etc.
-# then both backend fn and Op define associations to this signature for
-# for proper sync. the routing can be controlled by either Operator or
-# a middle man.
+# should we define dtypes? will need associations for that too.
 
 
 @dataclasses.dataclass
 class OperatorDefinition:
     name: str
     signature: inspect.Signature
-    op = None
-    backend = None
+    diff_op: Callable = None
+    comp_ops: Dict[str, Callable] = dataclasses.field(default_factory=dict)
 
-    def register_computation_op(
-            op, keyword_mapping=None, positional_reordering=None):
-        ...
+    def register_comp_op(self,
+                         backend,
+                         op,
+                         keyword_mapping=None,
+                         positional_reordering=None):
+        self.comp_ops[backend] = op
+        # TODO: finish this
 
-    def register_differentiation_op(self, op):
-        # Test here that the signatures are identical
-        # But this requires knowledge about the op structure. Namely, that op
-        # apply and forward.
-        ...
-
-    def compute(self, *args, **kwargs):
-        ...
+    def register_diff_op(self, op):
+        self.diff_op = op
 
 
-STANDARD_BINARY_SIGNATURE = ""
-STANDARD_UNARY_SIGNATURE = ""
+def make_unary_signature(on_axis=False):
+    data = inspect.Parameter(name='x',
+                             kind=inspect.Parameter.POSITIONAL_ONLY,
+                             annotation="variable.Variable")
+    params = [data]
+    if on_axis:
+        axis = inspect.Parameter(name='dim',
+                                 kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                 annotation=int)
+        params.append(axis)
+    return_annotation = "variable.Variable"
+    return inspect.Signature(params, return_annotation)
 
 
-class UnaryOp:
-    ...
+def make_binary_signature(allow_number=False):
+    data1 = inspect.Parameter(name='x1',
+                              kind=inspect.Parameter.POSITIONAL_ONLY,
+                              annotation="variable.Variable")
+    data2_annotation = (Union["variable.Variable", numbers.Number]
+                        if allow_number else "variable.Variable")
+    data2 = inspect.Parameter(name='x2',
+                              kind=inspect.Parameter.POSITIONAL_ONLY,
+                              annotation=data2_annotation)
+    return_annotation = "variable.Variable"
+    return inspect.Signature([data1, data2], return_annotation)
 
 
-class UnaryOpOnAxis:
-    ...
+class Function:
+    ADD = OperatorDefinition(name="add",
+                             signature=make_binary_signature(True))
+    MULTIPLY = OperatorDefinition(name="multiply",
+                                  signature=make_binary_signature(True))
+    SUBTRACT = OperatorDefinition(name="add",
+                                  signature=make_binary_signature(True))
+    DIVIDE = OperatorDefinition(name="divide",
+                                signature=make_binary_signature(True))
+    POW = OperatorDefinition(name="power",
+                             signature=make_binary_signature(True))
+    MATMUL = OperatorDefinition(name="divide",
+                                signature=make_binary_signature())
+    NEGATIVE = OperatorDefinition(name="negative",
+                                  signature=make_unary_signature())
+    EXP = OperatorDefinition(name="exp",
+                             signature=make_unary_signature())
+    SIGMOID = OperatorDefinition(name="sigmoid",
+                                 signature=make_unary_signature())
+    TANH = OperatorDefinition(name="tanh",
+                              signature=make_unary_signature())
+    LOG = OperatorDefinition(name="tanh",
+                             signature=make_unary_signature())
+    CLONE = OperatorDefinition(name="clone",
+                               signature=make_unary_signature())
 
 
-class Function(str, enum.Enum):
-    # ADD = OperatorDefinition(name="add", signature=BINARY_SIGNATURE)
-    ADD = "add"
-    MULTIPLY = "multiply"
-    NEGATE = "neg"
-    SUBTRACT = "sub"
-    CLONE = "clone"
-    EXP = "exp"
-    POW = "pow"
-    SIGMOID = "sigmoid"
-    TANH = "tanh"
-    MATMUL = "matmul"
-    TRANSPOSE = "transpose"
-    LOG = "log"
+class CreationRoutines:
+    CLONE = OperatorDefinition(name="clone",
+                               signature=make_unary_signature())
+
+
+class ManipulationRoutines:
+    TRANSPOSE = OperatorDefinition(name="transpose",
+                                   signature=make_unary_signature(True))
 
 
 class _FunctionTable(collections.abc.MutableMapping):
