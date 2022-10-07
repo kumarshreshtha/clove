@@ -1,8 +1,6 @@
 import abc
 from typing import Any, Callable, Mapping, Sequence
 
-from clove import definitions
-
 _backends = dict()
 
 

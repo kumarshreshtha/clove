@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import numbers
-from typing import Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 from clove import operator
-from clove import variable
-from clove import definitions
+# from clove import definitions
+
+if TYPE_CHECKING:
+    from clove import variable
 
 
 def is_number(x):
@@ -25,7 +27,6 @@ def get_data(array: Union[variable.Variable, numbers.Number]):
 
 
 class CloneOp(operator.Operator,
-              implements=definitions.Function.CLONE,
               symbol="clone"):
     def forward(self, x: variable.Variable):
         return self.evaluate(get_data(x))
@@ -35,7 +36,6 @@ class CloneOp(operator.Operator,
 
 
 class TransposeOp(operator.Operator,
-                  implements=definitions.Function.TRANSPOSE,
                   symbol="T"):
 
     def forward(self, x: variable.Variable, dim_0: int, dim_1: int):
@@ -48,7 +48,6 @@ class TransposeOp(operator.Operator,
 
 
 class PermuteOp(operator.Operator,
-                implements=definitions.Function.PERMUTE,
                 symbol=""):
 
     def forward(self, x: variable.Variable, dim: Sequence[int]):
@@ -61,7 +60,6 @@ class PermuteOp(operator.Operator,
 
 
 class AddOp(operator.Operator,
-            implements=definitions.Function.ADD,
             symbol="+"):
     def forward(self,
                 x1: variable.Variable,
@@ -74,7 +72,6 @@ class AddOp(operator.Operator,
 
 
 class MulOp(operator.Operator,
-            implements=definitions.Function.MULTIPLY,
             symbol="<&times;>"):
     def forward(self,
                 x1: variable.Variable,
@@ -91,7 +88,6 @@ class MulOp(operator.Operator,
 
 
 class MatmulOp(operator.Operator,
-               implements=definitions.Function.MATMUL,
                symbol="@"):
     def forward(self,
                 x1: variable.Variable,
@@ -110,7 +106,6 @@ class MatmulOp(operator.Operator,
 
 
 class NegOp(operator.Operator,
-            implements=definitions.Function.NEGATIVE,
             symbol="-1*"):
     def forward(self, x):
         return self.evaluate(get_data(x))
@@ -120,7 +115,6 @@ class NegOp(operator.Operator,
 
 
 class MinusOp(operator.Operator,
-              implements=definitions.Function.SUBTRACT,
               symbol="-"):
     def forward(self, x1, x2):
         return self.evaluate(get_data(x1), get_data(x2))
@@ -130,7 +124,6 @@ class MinusOp(operator.Operator,
 
 
 class ExpOp(operator.Operator,
-            implements=definitions.Function.EXP,
             symbol="exp"):
     def forward(self, x: variable.Variable):
         out = self.evaluate(get_data(x))
@@ -143,7 +136,6 @@ class ExpOp(operator.Operator,
 
 
 class LogOp(operator.Operator,
-            implements=definitions.Function.LOG,
             symbol="ln"):
     def forward(self, x: variable.Variable):
         self._cache.x = x
@@ -157,7 +149,6 @@ class LogOp(operator.Operator,
 
 
 class PowOp(operator.Operator,
-            implements=definitions.Function.POW,
             symbol="**"):
     def forward(self, x1: variable.Variable, x2: variable.Variable):
         out = self.evaluate(get_data(x1), get_data(x2))
@@ -181,7 +172,6 @@ class PowOp(operator.Operator,
 
 
 class SigmoidOp(operator.Operator,
-                implements=definitions.Function.SIGMOID,
                 symbol="<&sigma;>"):
     def forward(self, x: variable.Variable):
         out = self.evaluate(get_data(x))
@@ -195,7 +185,6 @@ class SigmoidOp(operator.Operator,
 
 
 class TanhOp(operator.Operator,
-             implements=definitions.Function.TANH,
              symbol="tanh"):
     def forward(self, x: variable.Variable):
         out = self.evaluate(get_data(x))

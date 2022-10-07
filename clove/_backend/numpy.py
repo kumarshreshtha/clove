@@ -2,7 +2,7 @@ import functools
 import inspect
 import numpy as np
 
-from clove import definitions
+from clove import ops
 from clove._backend import backend
 
 
@@ -32,6 +32,24 @@ def _resolve_transpose(fn):
         axes = (binding.arguments['dim0'], binding.arguments['dim1'])
         return fn(binding.arguments['x'], axes=axes)
     return wrapper
+
+
+@functools.lru_cache
+def fn_associations():
+    return {ops.CloneOp: _resolve_unary(np.copy),
+            ops.AddOp: _resolve_binary(np.add),
+            ops.ExpOp: _resolve_unary(np.exp),
+            ops.LogOp: _resolve_unary(np.log),
+            ops.MatmulOp: _resolve_binary(np.matmul),
+            ops.MulOp: _resolve_binary(np.multiply),
+            ops.NegOp: _resolve_unary(np.negative),
+            ops.PowOp: _resolve_binary(np.power),
+            ops.SigmoidOp: _resolve_unary(sigmoid),
+            ops.MinusOp: _resolve_binary(np.subtract),
+            ops.TanhOp: _resolve_unary(np.tanh),
+            ops.TransposeOp: _resolve_transpose(np.transpose),
+            ops.PermuteOp: _resolve_unary(np.transpose)
+            }
 
 
 class Numpy(backend.Backend, name="numpy"):
@@ -68,29 +86,13 @@ class Numpy(backend.Backend, name="numpy"):
         np.vander
     )
 
-    _OPS = {
-        definitions.Function.CLONE: _resolve_unary(np.copy),
-        definitions.Function.ADD: _resolve_binary(np.add),
-        definitions.Function.EXP: _resolve_unary(np.exp),
-        definitions.Function.LOG: _resolve_unary(np.log),
-        definitions.Function.MATMUL: _resolve_binary(np.matmul),
-        definitions.Function.MULTIPLY: _resolve_binary(np.multiply),
-        definitions.Function.NEGATIVE: _resolve_unary(np.negative),
-        definitions.Function.POW: _resolve_binary(np.power),
-        definitions.Function.SIGMOID: _resolve_unary(sigmoid),
-        definitions.Function.SUBTRACT: _resolve_binary(np.subtract),
-        definitions.Function.TANH: _resolve_unary(np.tanh),
-        definitions.Function.TRANSPOSE: _resolve_transpose(np.transpose),
-        definitions.Function.PERMUTE: _resolve_unary(np.transpose)
-    }
-
     @classmethod
     def creation_routines(cls):
         return cls._CREATION_ROUTINES
 
     @classmethod
-    def resolve(cls, defn, binding):
-        return cls._OPS[defn](binding)
+    def resolve(cls, op, binding):
+        return fn_associations[op](binding)
 
 
 # def resolve(fn:_registry.Function, binding):

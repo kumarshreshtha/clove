@@ -5,7 +5,6 @@ from typing import Optional, Sequence, Union
 import weakref
 
 from clove import _backend
-from clove import definitions
 from clove import grad_mode
 from clove import variable
 
@@ -55,12 +54,11 @@ class Operator:
 
     def __init_subclass__(
             cls,
-            implements: definitions.Function,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
-        cls.defn = implements
-        if implements is not None:
-            definitions.register_operator(implements, cls)
+        # cls.defn = implements
+        # if implements is not None:
+        #     definitions.register_operator(implements, cls)
 
     @property
     def next_ops(self):
@@ -117,7 +115,7 @@ class Operator:
         return variable.Variable(value)
 
 
-class _LeafOp(Operator, implements=None, symbol="leaf"):
+class _LeafOp(Operator, symbol="leaf"):
 
     def __init__(self, variable: variable.Variable):
         super().__init__(variable=variable,

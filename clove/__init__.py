@@ -1,21 +1,21 @@
-from . import _math_ops
 from .grad_mode import set_grad_enabled, is_grad_enabled, no_grad
 from .variable import Variable
+from . import _backend
 from . import autodiff
 from . import dot
-from . import definitions
-from . import _backend
 from . import make_bindings
+from . import ops
 
-for __name, __op in definitions.walk_registry():
-    globals()[__name] = make_bindings.make_fn(__name, __op)
 
-for __method_name, __fn_name in Variable.METHODS_FROM_DEFN.items():
-    if __fn_name in definitions.fn_table:
-        setattr(Variable,
-                __method_name,
-                make_bindings.make_method(__method_name,
-                                          definitions.fn_table[__fn_name]))
+# for __name, __op in definitions.walk_registry():
+#     globals()[__name] = make_bindings.make_fn(__name, __op)
+
+# for __method_name, __fn_name in Variable.METHODS_FROM_DEFN.items():
+#     if __fn_name in definitions.fn_table:
+#         setattr(Variable,
+#                 __method_name,
+#                 make_bindings.make_method(__method_name,
+#                                           definitions.fn_table[__fn_name]))
 
 # Maybe just do it for the current backend?
 __creation_ops = make_bindings.make_creation_ops()
