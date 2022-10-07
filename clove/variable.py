@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Optional
 import warnings
 
 from clove import autodiff
-from clove import _registry
+from clove import definitions
 
 if TYPE_CHECKING:
     from clove import operator
@@ -16,18 +16,18 @@ class Variable:
     """Container class for a variable and it's gradient."""
 
     METHODS_FROM_REGISTRY = dict(
-        __add__=_registry.Function.ADD,
-        __radd__=_registry.Function.ADD,
-        __mul__=_registry.Function.MULTIPLY,
-        __rmul__=_registry.Function.MULTIPLY,
-        __sub__=_registry.Function.SUBTRACT,
-        __neg__=_registry.Function.NEGATE,
-        __pow__=_registry.Function.POW,
-        __matmul__=_registry.Function.MATMUL,
-        sigmoid=_registry.Function.SIGMOID,
-        exp=_registry.Function.EXP,
-        tanh=_registry.Function.TANH,
-        transpose=_registry.Function.TRANSPOSE
+        __add__=definitions.Function.ADD,
+        __radd__=definitions.Function.ADD,
+        __mul__=definitions.Function.MULTIPLY,
+        __rmul__=definitions.Function.MULTIPLY,
+        __sub__=definitions.Function.SUBTRACT,
+        __neg__=definitions.Function.NEGATIVE,
+        __pow__=definitions.Function.POW,
+        __matmul__=definitions.Function.MATMUL,
+        sigmoid=definitions.Function.SIGMOID,
+        exp=definitions.Function.EXP,
+        tanh=definitions.Function.TANH,
+        transpose=definitions.Function.TRANSPOSE
     )
 
     def __init__(self,

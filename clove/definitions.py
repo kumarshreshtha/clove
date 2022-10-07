@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import collections
 import dataclasses
+import enum
 import inspect
-import numbers
-from typing import Callable, Dict, Union
+from typing import Sequence, Union
 
 # should we define dtypes? will need associations for that too.
 
@@ -13,30 +13,17 @@ from typing import Callable, Dict, Union
 class OperatorDefinition:
     name: str
     signature: inspect.Signature
-    diff_op: Callable = None
-    comp_ops: Dict[str, Callable] = dataclasses.field(default_factory=dict)
-
-    def register_comp_op(self,
-                         backend,
-                         op,
-                         keyword_mapping=None,
-                         positional_reordering=None):
-        self.comp_ops[backend] = op
-        # TODO: finish this
-
-    def register_diff_op(self, op):
-        self.diff_op = op
 
 
-def make_unary_signature(on_axis=False):
+def make_unary_signature(on_axes=False):
     data = inspect.Parameter(name='x',
                              kind=inspect.Parameter.POSITIONAL_ONLY,
                              annotation="variable.Variable")
     params = [data]
-    if on_axis:
+    if on_axes:
         axis = inspect.Parameter(name='dim',
                                  kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                 annotation=int)
+                                 annotation=Union[int, Sequence[int]])
         params.append(axis)
     return_annotation = "variable.Variable"
     return inspect.Signature(params, return_annotation)
@@ -46,7 +33,7 @@ def make_binary_signature(allow_number=False):
     data1 = inspect.Parameter(name='x1',
                               kind=inspect.Parameter.POSITIONAL_ONLY,
                               annotation="variable.Variable")
-    data2_annotation = (Union["variable.Variable", numbers.Number]
+    data2_annotation = ("Union['variable.Variable', numbers.Number]"
                         if allow_number else "variable.Variable")
     data2 = inspect.Parameter(name='x2',
                               kind=inspect.Parameter.POSITIONAL_ONLY,
@@ -55,7 +42,7 @@ def make_binary_signature(allow_number=False):
     return inspect.Signature([data1, data2], return_annotation)
 
 
-class Function:
+class Function(OperatorDefinition, enum.Enum):
     ADD = OperatorDefinition(name="add",
                              signature=make_binary_signature(True))
     MULTIPLY = OperatorDefinition(name="multiply",
@@ -92,35 +79,35 @@ class ManipulationRoutines:
                                    signature=make_unary_signature(True))
 
 
-class _FunctionTable(collections.abc.MutableMapping):
-    def __init__(self):
-        self.__fn_names = frozenset(fn for fn in Function)
-        self.__associations = dict()
+# class _FunctionTable(collections.abc.MutableMapping):
+#     def __init__(self):
+#         self.__fn_names = frozenset(fn for fn in Function)
+#         self.__associations = dict()
 
-    def __setitem__(self, key, value) -> None:
-        if key not in self.__fn_names:
-            raise KeyError()
-        self.__associations[key] = value
+#     def __setitem__(self, key, value) -> None:
+#         if key not in self.__fn_names:
+#             raise KeyError()
+#         self.__associations[key] = value
 
-    def __getitem__(self, key):
-        return self.__associations[key]
+#     def __getitem__(self, key):
+#         return self.__associations[key]
 
-    def __delitem__(self, key):
-        raise NotImplementedError
+#     def __delitem__(self, key):
+#         raise NotImplementedError
 
-    def __iter__(self):
-        return iter(self.__associations)
+#     def __iter__(self):
+#         return iter(self.__associations)
 
-    def __len__(self):
-        return len(self.__associations)
-
-
-fn_table = _FunctionTable()
+#     def __len__(self):
+#         return len(self.__associations)
 
 
-def register_operator(name, op):
-    fn_table[name] = op
+# fn_table = _FunctionTable()
 
 
-def walk_registry():
-    yield from fn_table.items()
+# def register_operator(name, op):
+#     fn_table[name] = op
+
+
+# def walk_registry():
+#     yield from fn_table.items()

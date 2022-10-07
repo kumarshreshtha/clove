@@ -3,19 +3,19 @@ from .grad_mode import set_grad_enabled, is_grad_enabled, no_grad
 from .variable import Variable
 from . import autodiff
 from . import dot
-from . import _registry
+from . import definitions
 from . import _backend
 from . import make_bindings
 
-for __name, __op in _registry.walk_registry():
+for __name, __op in definitions.walk_registry():
     globals()[__name] = make_bindings.make_fn(__name, __op)
 
 for __method_name, __fn_name in Variable.METHODS_FROM_REGISTRY.items():
-    if __fn_name in _registry.fn_table:
+    if __fn_name in definitions.fn_table:
         setattr(Variable,
                 __method_name,
                 make_bindings.make_method(__method_name,
-                                          _registry.fn_table[__fn_name]))
+                                          definitions.fn_table[__fn_name]))
 
 __creation_ops = make_bindings.make_creation_ops()
 

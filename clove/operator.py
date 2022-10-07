@@ -5,7 +5,7 @@ from typing import Optional, Sequence, Union
 import weakref
 
 from clove import _backend
-from clove import _registry
+from clove import definitions
 from clove import grad_mode
 from clove import variable
 
@@ -55,12 +55,12 @@ class Operator:
 
     def __init_subclass__(
             cls,
-            implements: _registry.Function,
+            implements: definitions.Function,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
-        cls.implements = implements
+        cls.defn = implements
         if implements is not None:
-            _registry.register_operator(implements, cls)
+            definitions.register_operator(implements, cls)
 
     @property
     def next_ops(self):
@@ -110,21 +110,11 @@ class Operator:
     def clear_cache(self):
         self._cache.clear()
 
-# TODO: there has to be a mechanism to control function signature in backend.
-# Only way is to associate backend directly with ops.
-    @property
-    def fn(self):
-        bk = _backend.get_backend()
-        associations = bk.fn_associations()
-        if not self.implements in associations:
-            raise NotImplementedError(
-                f"backend {bk.name} does not support {self.implements}")
-        return bk.fn_associations()[self.implements]
-
-    # def __repr__(self):
-    #     op_repr = f"Operator({self.__class__.__name__}[{self.symbol}])"
-    #     var = self.variable
-    #     var_repr = if var is not None
+    def evaluate(self, *args, **kwargs):
+        binding = self.defn.value.signature.bind(*args, **kwargs)
+        binding.apply_defaults()
+        value = _backend.get_backend().resolve(self.defn, binding)
+        return variable.Variable(value)
 
 
 class _LeafOp(Operator, implements=None, symbol="leaf"):
