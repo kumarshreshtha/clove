@@ -1,12 +1,14 @@
 
 from __future__ import annotations
-import functools
 
-from typing import Dict, List, Optional, Sequence, Set, Union
+import functools
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Set, Union
 
 from clove import grad_mode
-from clove import operator
 from clove import variable
+
+if TYPE_CHECKING:
+    from clove import operator
 
 
 def _topological_order(root: Optional[operator.Operator],

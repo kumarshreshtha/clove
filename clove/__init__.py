@@ -1,10 +1,10 @@
 from .grad_mode import set_grad_enabled, is_grad_enabled, no_grad
 from .variable import Variable
+from . import ops
 from . import _backend
 from . import autodiff
 from . import dot
-from . import make_bindings
-from . import ops
+from . import bindings_utils
 
 
 # for __name, __op in definitions.walk_registry():
@@ -18,7 +18,7 @@ from . import ops
 #                                           definitions.fn_table[__fn_name]))
 
 # Maybe just do it for the current backend?
-__creation_ops = make_bindings.make_creation_ops()
+__creation_ops = bindings_utils.make_creation_ops()
 
 
 def get_backend():

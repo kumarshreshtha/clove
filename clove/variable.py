@@ -3,6 +3,7 @@ import warnings
 
 from clove import autodiff
 from clove import ops
+from clove import bindings_utils
 
 if TYPE_CHECKING:
     from clove import operator
@@ -94,3 +95,9 @@ class Variable:
     def __repr__(self):
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
         return f"{self.__class__.__name__}({self.data}{grad_repr})"
+
+
+for __method_name, __op in Variable.METHODS_FROM_OPS.items():
+    setattr(Variable,
+            __method_name,
+            bindings_utils.make_method(__method_name, __op))
