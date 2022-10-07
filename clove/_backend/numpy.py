@@ -13,7 +13,7 @@ def sigmoid(x: np.ndarray):
 def _resolve_unary(fn):
     @functools.wraps
     def wrapper(binding: inspect.BoundArguments):
-        if axis := 'dim' in binding.arguments:
+        if 'dim' in binding.arguments:
             return fn(binding.arguments['x'], axis=binding.arguments['dim'])
         return fn(binding.arguments['x'])
     return wrapper
@@ -88,6 +88,7 @@ class Numpy(backend.Backend, name="numpy"):
     def creation_routines(cls):
         return cls._CREATION_ROUTINES
 
+    @classmethod
     def resolve(cls, defn, binding):
         return cls._OPS[defn](binding)
 

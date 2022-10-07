@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numbers
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 from clove import operator
 from clove import variable
@@ -10,6 +10,12 @@ from clove import definitions
 
 def is_number(x):
     return isinstance(x, numbers.Number)
+
+# TODO: add something to throw errors on backend mismatch.
+# a variable will store it's creation backend.
+
+# TODO: maybe we can abstract out self.evaluate to parent and change forward
+# to self.save_for_backward(*args, out=None, **kwargs)
 
 
 def get_data(array: Union[variable.Variable, numbers.Number]):
@@ -39,6 +45,19 @@ class TransposeOp(operator.Operator,
 
     def backward(self, grad_out: variable.Variable):
         return TransposeOp.apply(grad_out, self._cache.d1, self._cache.d0)
+
+
+class PermuteOp(operator.Operator,
+                implements=definitions.Function.PERMUTE,
+                symbol=""):
+
+    def forward(self, x: variable.Variable, dim: Sequence[int]):
+        if self.requires_grad:
+            self._cache.rev_dim = sorted(range(len(dim)), key=dim.__getitem__)
+        return self.evaluate(get_data(x), dim)
+
+    def backward(self, grad_out: variable.Variable):
+        return PermuteOp.apply(grad_out, self._cache.rev_dim)
 
 
 class AddOp(operator.Operator,
@@ -91,7 +110,7 @@ class MatmulOp(operator.Operator,
 
 
 class NegOp(operator.Operator,
-            implements=definitions.Function.NEGATE,
+            implements=definitions.Function.NEGATIVE,
             symbol="-1*"):
     def forward(self, x):
         return self.evaluate(get_data(x))
@@ -166,7 +185,7 @@ class SigmoidOp(operator.Operator,
                 symbol="<&sigma;>"):
     def forward(self, x: variable.Variable):
         out = self.evaluate(get_data(x))
-        self._cache.out = out if operator.prop_grad(x) else None
+        self._cache.out = out
         return out
 
     def backward(self, grad_out: variable.Variable):
@@ -180,7 +199,7 @@ class TanhOp(operator.Operator,
              symbol="tanh"):
     def forward(self, x: variable.Variable):
         out = self.evaluate(get_data(x))
-        self._cache.out = out if operator.prop_grad(x) else None
+        self._cache.out = out
         return out
 
     def backward(self, grad_out: variable.Variable):

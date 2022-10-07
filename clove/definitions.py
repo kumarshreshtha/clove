@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import dataclasses
 import enum
 import inspect
@@ -32,14 +31,28 @@ def make_unary_signature(on_axes=False):
 def make_binary_signature(allow_number=False):
     data1 = inspect.Parameter(name='x1',
                               kind=inspect.Parameter.POSITIONAL_ONLY,
-                              annotation="variable.Variable")
-    data2_annotation = ("Union['variable.Variable', numbers.Number]"
-                        if allow_number else "variable.Variable")
+                              annotation="Variable")
+    data2_annotation = ("Union['Variable', Number]"
+                        if allow_number else "Variable")
     data2 = inspect.Parameter(name='x2',
                               kind=inspect.Parameter.POSITIONAL_ONLY,
                               annotation=data2_annotation)
     return_annotation = "variable.Variable"
     return inspect.Signature([data1, data2], return_annotation)
+
+
+def transpose_signature():
+    data = inspect.Parameter(name='x',
+                             kind=inspect.Parameter.POSITIONAL_ONLY,
+                             annotation="Variable")
+    dim0 = inspect.Parameter(name='dim0',
+                             kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                             annotation=int)
+    dim1 = inspect.Parameter(name='dim1',
+                             kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                             annotation=int)
+    return_annotation = "Variable"
+    return inspect.Signature([data, dim0, dim1], return_annotation)
 
 
 class Function(OperatorDefinition, enum.Enum):
@@ -67,6 +80,10 @@ class Function(OperatorDefinition, enum.Enum):
                              signature=make_unary_signature())
     CLONE = OperatorDefinition(name="clone",
                                signature=make_unary_signature())
+    TRANSPOSE = OperatorDefinition(name="transpose",
+                                   signature=transpose_signature())
+    PERMUTE = OperatorDefinition(name="permute",
+                                 signature=make_unary_signature(True))
 
 
 class CreationRoutines:
@@ -74,40 +91,34 @@ class CreationRoutines:
                                signature=make_unary_signature())
 
 
-class ManipulationRoutines:
-    TRANSPOSE = OperatorDefinition(name="transpose",
-                                   signature=make_unary_signature(True))
+# class ManipulationRoutines:
 
+    # class _FunctionTable(collections.abc.MutableMapping):
+    #     def __init__(self):
+    #         self.__fn_names = frozenset(fn for fn in Function)
+    #         self.__associations = dict()
 
-# class _FunctionTable(collections.abc.MutableMapping):
-#     def __init__(self):
-#         self.__fn_names = frozenset(fn for fn in Function)
-#         self.__associations = dict()
+    #     def __setitem__(self, key, value) -> None:
+    #         if key not in self.__fn_names:
+    #             raise KeyError()
+    #         self.__associations[key] = value
 
-#     def __setitem__(self, key, value) -> None:
-#         if key not in self.__fn_names:
-#             raise KeyError()
-#         self.__associations[key] = value
+    #     def __getitem__(self, key):
+    #         return self.__associations[key]
 
-#     def __getitem__(self, key):
-#         return self.__associations[key]
+    #     def __delitem__(self, key):
+    #         raise NotImplementedError
 
-#     def __delitem__(self, key):
-#         raise NotImplementedError
+    #     def __iter__(self):
+    #         return iter(self.__associations)
 
-#     def __iter__(self):
-#         return iter(self.__associations)
+    #     def __len__(self):
+    #         return len(self.__associations)
 
-#     def __len__(self):
-#         return len(self.__associations)
+    # fn_table = _FunctionTable()
 
+    # def register_operator(name, op):
+    #     fn_table[name] = op
 
-# fn_table = _FunctionTable()
-
-
-# def register_operator(name, op):
-#     fn_table[name] = op
-
-
-# def walk_registry():
-#     yield from fn_table.items()
+    # def walk_registry():
+    #     yield from fn_table.items()

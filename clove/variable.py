@@ -9,13 +9,13 @@ if TYPE_CHECKING:
 
 # TODO: variable should have properties dtype, shape, size, numel etc
 # must form associations with the backend and not access them directly.
-# as that might brake the compatibility with backend.
+# as that might break the compatibility with backend.
 
 
 class Variable:
     """Container class for a variable and it's gradient."""
 
-    METHODS_FROM_REGISTRY = dict(
+    METHODS_FROM_DEFN = dict(
         __add__=definitions.Function.ADD,
         __radd__=definitions.Function.ADD,
         __mul__=definitions.Function.MULTIPLY,
