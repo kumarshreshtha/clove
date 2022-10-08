@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 # a variable will store it's creation backend.
 
 # TODO: make it easy to add backends and ops from outside clove
-
 class CloneOp(operator.Operator,
               symbol="clone"):
     def forward(self, x: variable.ArrayLike):

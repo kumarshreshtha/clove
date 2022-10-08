@@ -24,7 +24,7 @@ def transpose(x: variable.ArrayLike, dim0: int, dim1: int):
 
 
 def _resolve_unary(fn):
-    @functools.wraps
+    @functools.wraps(fn)
     def wrapper(x: variable.ArrayLike,
                 dim: Union[int, Sequence[int], None] = None):
         return fn(get_data(x)) if dim is None else fn(get_data(x), axis=dim)
@@ -32,10 +32,10 @@ def _resolve_unary(fn):
 
 
 def _resolve_binary(fn):
-    @functools.wraps
+    @functools.wraps(fn)
     def wrapper(x1: variable.ArrayLike,
                 x2: variable.ArrayLike):
-        return fn(get_data(x1), get_data(x2.data))
+        return fn(get_data(x1), get_data(x2))
     return wrapper
 
 # TODO: see what to do with this.

@@ -120,7 +120,9 @@ class Operator:
         self._cache.clear()
 
     def evaluate(self, *args, **kwargs):
-        return variable.Variable(self.backend.resolve(self, *args, **kwargs))
+        return variable.Variable(
+            self.backend.resolve(self.__class__, *args, **kwargs),
+            self.backend)
 
     @classmethod
     def get_signature(cls):

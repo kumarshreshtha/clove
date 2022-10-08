@@ -44,7 +44,7 @@ class Variable:
         self.requires_grad = requires_grad
         self.name = name
         self.op: Optional[operator.Operator] = None
-        self._backend = _backend
+        self._backend = backend
         self._retains_grad = False
 
     @property
