@@ -7,6 +7,7 @@ import numpy as np
 from clove import backend
 from clove import ops
 from clove import variable
+from clove import binding_utils
 
 
 def get_data(array: variable.ArrayLike):
@@ -38,28 +39,9 @@ def _resolve_binary(fn):
         return fn(get_data(x1), get_data(x2))
     return wrapper
 
-# TODO: see what to do with this.
-
-
-@functools.lru_cache
-def fn_associations():
-    return {ops.CloneOp: _resolve_unary(np.copy),
-            ops.AddOp: _resolve_binary(np.add),
-            ops.ExpOp: _resolve_unary(np.exp),
-            ops.LogOp: _resolve_unary(np.log),
-            ops.MatmulOp: _resolve_binary(np.matmul),
-            ops.MulOp: _resolve_binary(np.multiply),
-            ops.NegOp: _resolve_unary(np.negative),
-            ops.PowOp: _resolve_binary(np.power),
-            ops.SigmoidOp: sigmoid,
-            ops.MinusOp: _resolve_binary(np.subtract),
-            ops.TanhOp: _resolve_unary(np.tanh),
-            ops.TransposeOp: transpose,
-            ops.PermuteOp: _resolve_unary(np.transpose)
-            }
-
 
 class Numpy(backend.Backend, name="numpy"):
+    MODULE = np
 
     _CREATION_ROUTINES = (
         np.empty,
@@ -92,6 +74,20 @@ class Numpy(backend.Backend, name="numpy"):
         np.triu,
         np.vander
     )
+    _OPS = {ops.CloneOp: _resolve_unary(np.copy),
+            ops.AddOp: _resolve_binary(np.add),
+            ops.ExpOp: _resolve_unary(np.exp),
+            ops.LogOp: _resolve_unary(np.log),
+            ops.MatmulOp: _resolve_binary(np.matmul),
+            ops.MulOp: _resolve_binary(np.multiply),
+            ops.NegOp: _resolve_unary(np.negative),
+            ops.PowOp: _resolve_binary(np.power),
+            ops.SigmoidOp: sigmoid,
+            ops.MinusOp: _resolve_binary(np.subtract),
+            ops.TanhOp: _resolve_unary(np.tanh),
+            ops.TransposeOp: transpose,
+            ops.PermuteOp: _resolve_unary(np.transpose)
+            }
 
     @classmethod
     def creation_routines(cls):
@@ -99,4 +95,8 @@ class Numpy(backend.Backend, name="numpy"):
 
     @classmethod
     def resolve(cls, op, *args, **kwargs):
-        return fn_associations()[op](*args, **kwargs)
+        return cls._OPS[op](*args, **kwargs)
+
+    @classmethod
+    def module(cls):
+        return cls.MODULE

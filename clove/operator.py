@@ -1,7 +1,6 @@
 from __future__ import annotations
 import dataclasses
 
-import inspect
 from typing import Optional, Sequence
 import weakref
 
@@ -65,7 +64,8 @@ class Operator:
             fn_name: Optional[str] = None,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
-        fn_registry[fn_name] = cls
+        if fn_name is not None:
+            fn_registry[fn_name] = cls
 
     @property
     def next_ops(self):
@@ -128,14 +128,6 @@ class Operator:
         return variable.Variable(
             self.backend.resolve(self.__class__, *args, **kwargs),
             self.backend)
-
-    @classmethod
-    def get_signature(cls):
-        signature = inspect.signature(cls.forward)
-        return signature.replace(
-            parameters=[param for param in signature.parameters.values()
-                        if param.name != "self"],
-            return_annotation=variable.Variable)
 
 
 class _LeafOp(Operator, symbol="leaf"):

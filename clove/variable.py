@@ -4,7 +4,7 @@ import warnings
 
 from clove import autodiff
 from clove import ops
-from clove import bindings_utils
+from clove import binding_utils
 from clove import backend as backend_lib
 
 if TYPE_CHECKING:
@@ -108,7 +108,7 @@ class Variable:
 for __method_name, __op in Variable.METHODS_FROM_OPS.items():
     setattr(Variable,
             __method_name,
-            bindings_utils.make_method(__method_name, __op))
+            binding_utils.make_method(__method_name, __op))
 
 ArrayLike = Union[
     numbers.Number,

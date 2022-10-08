@@ -1,12 +1,21 @@
-import collections
+from __future__ import annotations
+
 import functools
 import inspect
+import pathlib
+import textwrap
 import types
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from clove import backend
 from clove import operator
 from clove import variable
+
+
+def get_op_signature(cls: operator.Operator):
+    signature = inspect.signature(cls.forward)
+    return signature.replace(
+        parameters=[param for param in signature.parameters.values()
+                    if param.name != "self"])
 
 
 def _bind_free_vars(func):
@@ -27,13 +36,14 @@ def _copy_op(name, op: operator.Operator):
 
 def make_fn(name, op: operator.Operator):
     new_fn = _copy_op(name, op)
-    new_fn.__signature__ = op.get_signature()
+    new_fn.__signature__ = get_op_signature(op)
+    new_fn._op = op
     return new_fn
 
 
 def make_method(name, op: operator.Operator):
     new_fn = _copy_op(name, op)
-    sig = op.get_signature()
+    sig = get_op_signature(op)
     self_param = inspect.Parameter(
         "self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
     new_parameters = [self_param,
@@ -61,12 +71,12 @@ def update_signature(sig: inspect.Signature) -> inspect.Signature:
                        return_annotation=variable.Variable)
 
 
-def creation_op_wrapper(fn, bk):
+def wrap_creation_op(fn, bk):
     @functools.wraps(fn)
-    def runner(*args,
-               requires_grad: bool = False,
-               name: Optional[str] = None,
-               **kwargs):
+    def wrapper(*args,
+                requires_grad: bool = False,
+                name: Optional[str] = None,
+                **kwargs):
         args = list(args)
         for i, arg in enumerate(args):
             if isinstance(arg, variable.Variable):
@@ -84,15 +94,14 @@ def creation_op_wrapper(fn, bk):
         except ValueError:
             sig = None
         if not sig is None:
-            runner.__signature__ = sig
-            runner.__defaults__ = tuple(
+            wrapper.__signature__ = sig
+            wrapper.__defaults__ = tuple(
                 param.default for param in sig.parameters.values()
                 if param.default is not inspect.Parameter.empty)
-            runner.__annotations__ = {param.name: param.annotation
-                                      for param in sig.parameters.values()}
-    doc = runner.__doc__
+            wrapper.__annotations__ = {param.name: param.annotation
+                                       for param in sig.parameters.values()}
     new_doc = f"""
-    {runner.__name__}(*args, requires_grad=False, name=None, **kwargs)
+    {wrapper.__name__}(*args, requires_grad=False, name=None, **kwargs)
 
     clove args:
 
@@ -105,17 +114,27 @@ def creation_op_wrapper(fn, bk):
 
     Backend Docs:
 
-    {doc}
+    {wrapper.__doc__}
     """
+    wrapper.__doc__ = new_doc
 
-    runner.__doc__ = new_doc
+    return wrapper
 
-    return runner
 
-# TODO: only do this for the current backend.
-def make_creation_ops():
-    ops = collections.defaultdict(dict)
-    for bk_name, bk in backend.backends():
-        for op in bk.creation_routines():
-            ops[bk_name][op.__name__] = creation_op_wrapper(op, bk)
-    return ops
+def generate_static_op_bindings(filename="_op_bindings.py",
+                                basedir=pathlib.Path(__file__).parent):
+
+    code = textwrap.dedent("""
+    from clove import binding_utils
+    from clove import ops
+
+    """)
+    bindings = "\n".join([
+        f"{name} = binding_utils.make_fn('{name}', ops.{op.__name__})"
+        for name, op in operator.fn_registry.items()
+    ])
+
+    code = code + bindings
+    basedir.mkdir(parents=True, exist_ok=True)
+    with open(basedir / filename, "w") as f:
+        f.write(code)

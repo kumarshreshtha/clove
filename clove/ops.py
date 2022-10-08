@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class CloneOp(operator.Operator, fn_name="clone"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayLike) -> variable.Variable:
         return self.evaluate(x)
 
     def backward(self, grad_out: variable.ArrayLike):

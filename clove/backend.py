@@ -17,6 +17,10 @@ class Backend:
         ...
 
     @abc.abstractclassmethod
+    def module(cls) -> Sequence[Callable]:
+        ...
+
+    @abc.abstractclassmethod
     def resolve(cls, op, *args, **kwargs) -> Any:
         ...
 
