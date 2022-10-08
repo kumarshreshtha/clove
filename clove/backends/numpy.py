@@ -4,7 +4,7 @@ import functools
 from typing import Sequence, Union
 import numpy as np
 
-from clove._backend import base
+from clove import backend
 from clove import ops
 from clove import variable
 
@@ -59,7 +59,7 @@ def fn_associations():
             }
 
 
-class Numpy(base.Backend, name="numpy"):
+class Numpy(backend.Backend, name="numpy"):
 
     _CREATION_ROUTINES = (
         np.empty,

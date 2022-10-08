@@ -4,7 +4,7 @@ import inspect
 import types
 from typing import Optional
 
-from clove import _backend
+from clove import backend
 from clove import operator
 from clove import variable
 
@@ -112,11 +112,10 @@ def creation_op_wrapper(fn, bk):
 
     return runner
 
-
+# TODO: only do this for the current backend.
 def make_creation_ops():
     ops = collections.defaultdict(dict)
-    for bk_name, bk in _backend.backends():
-        bk: _backend.Backend
+    for bk_name, bk in backend.backends():
         for op in bk.creation_routines():
             ops[bk_name][op.__name__] = creation_op_wrapper(op, bk)
     return ops

@@ -5,7 +5,7 @@ import warnings
 from clove import autodiff
 from clove import ops
 from clove import bindings_utils
-from clove import _backend
+from clove import backend as backend_lib
 
 if TYPE_CHECKING:
     from clove import operator
@@ -35,7 +35,7 @@ class Variable:
 
     def __init__(self,
                  data,
-                 backend: _backend.Backend,
+                 backend: backend_lib.Backend,
                  requires_grad=False,
                  name: str = None):
 

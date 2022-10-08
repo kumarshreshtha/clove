@@ -5,7 +5,7 @@ import inspect
 from typing import Optional, Sequence
 import weakref
 
-from clove import _backend
+from clove import backend as backend_lib
 from clove import grad_mode
 from clove import variable
 
@@ -29,7 +29,7 @@ class Operator:
                  children: Sequence[Operator] = (),
                  requires_grad: bool = False,
                  variable: variable.Variable = None,
-                 backend: _backend.Backend = None):
+                 backend: backend_lib.Backend = None):
 
         cls_name = self.__class__.__name__
 
@@ -54,7 +54,7 @@ class Operator:
         self._cache = Cache()
         self.grad_store = self.GradStore()
         self.backend = (
-            backend if backend is not None else _backend.get_backend())
+            backend if backend is not None else backend_lib.get_backend())
 
     # TODO: when signature is None get it from backend?
     def __init_subclass__(
