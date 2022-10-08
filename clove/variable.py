@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Optional
+import numbers
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Union
 import warnings
 
 from clove import autodiff
@@ -102,3 +103,10 @@ for __method_name, __op in Variable.METHODS_FROM_OPS.items():
     setattr(Variable,
             __method_name,
             bindings_utils.make_method(__method_name, __op))
+
+ArrayLike = Union[
+    numbers.Number,
+    Sequence[numbers.Number],
+    Sequence[Sequence[Any]],
+    Variable,
+]

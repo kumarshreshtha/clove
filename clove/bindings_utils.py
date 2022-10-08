@@ -18,7 +18,7 @@ def _bind_free_vars(func):
 
 def _copy_op(name, op: operator.Operator):
     new_fn = _bind_free_vars(op.apply)
-    new_fn.__doc__ = op.forward.__doc__
+    new_fn.__doc__ = op.__doc__
     new_fn.__annotations__ = op.forward.__annotations__
     new_fn.__defaults__ = op.forward.__defaults__
     new_fn.__name__ = name
@@ -33,10 +33,12 @@ def make_fn(name, op: operator.Operator):
 
 def make_method(name, op: operator.Operator):
     new_fn = _copy_op(name, op)
-    sig = inspect.signature(op.forward)
-    new_sig = sig.replace(
-        parameters=[param for i, param in enumerate(sig.parameters.values())
-                    if i != 1])
+    sig = op.get_signature()
+    self_param = inspect.Parameter(
+        "self", kind=inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    new_parameters = [self_param,
+                      *[param for param in list(sig.parameters.values())[1:]]]
+    new_sig = sig.replace(parameters=new_parameters)
     new_fn.__signature__ = new_sig
     return new_fn
 

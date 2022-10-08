@@ -1,37 +1,44 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Sequence, Union
+from typing import Sequence, Union
 import numpy as np
 
-from clove import ops
 from clove._backend import base
+from clove import ops
+from clove import variable
 
-if TYPE_CHECKING:
-    from clove import variable
+
+def get_data(array: variable.ArrayLike):
+    if isinstance(array, variable.Variable):
+        return array.data
+    return array
 
 
-def sigmoid(x: np.ndarray):
-    return np.reciprocal(1 + np.exp(-x))
+def sigmoid(x: variable.ArrayLike):
+    return np.reciprocal(1 + np.exp(-get_data(x)))
+
+
+def transpose(x: variable.ArrayLike, dim0: int, dim1: int):
+    return np.transpose(get_data(x), axes=(dim0, dim1))
 
 
 def _resolve_unary(fn):
     @functools.wraps
-    def wrapper(x: variable.Variable,
+    def wrapper(x: variable.ArrayLike,
                 dim: Union[int, Sequence[int], None] = None):
-        return fn(x.data) if dim is None else fn(x.data, axis=dim)
+        return fn(get_data(x)) if dim is None else fn(get_data(x), axis=dim)
     return wrapper
 
 
 def _resolve_binary(fn):
     @functools.wraps
-    def wrapper(x1: variable.Variable, x2: variable.Variable):
-        return fn(x1.data, x2.data)
+    def wrapper(x1: variable.ArrayLike,
+                x2: variable.ArrayLike):
+        return fn(get_data(x1), get_data(x2.data))
     return wrapper
 
-
-def transpose(x: variable.Variable, dim0: int, dim1: int):
-    return np.transpose(x.data, axes=(dim0, dim1))
+# TODO: see what to do with this.
 
 
 @functools.lru_cache
@@ -44,7 +51,7 @@ def fn_associations():
             ops.MulOp: _resolve_binary(np.multiply),
             ops.NegOp: _resolve_unary(np.negative),
             ops.PowOp: _resolve_binary(np.power),
-            ops.SigmoidOp: _resolve_unary(sigmoid),
+            ops.SigmoidOp: sigmoid,
             ops.MinusOp: _resolve_binary(np.subtract),
             ops.TanhOp: _resolve_unary(np.tanh),
             ops.TransposeOp: transpose,

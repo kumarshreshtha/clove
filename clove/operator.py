@@ -53,13 +53,11 @@ class Operator:
         self._cache = Cache()
         self.grad_store = self.GradStore()
 
+    # TODO: when signature is None get it from backend?
     def __init_subclass__(
             cls,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
-        # cls.defn = implements
-        # if implements is not None:
-        #     definitions.register_operator(implements, cls)
 
     @property
     def next_ops(self):
@@ -73,7 +71,7 @@ class Operator:
     def variable(self, value):
         self._var_ref = weakref.ref(value)
 
-    def forward(self, *args):
+    def forward(self, *args, **kwargs):
         raise NotImplementedError(
             f"forward pass for {self.__class__.__name__} has not been"
             " implemented")
@@ -84,13 +82,19 @@ class Operator:
             " implemented")
 
     @classmethod
-    def apply(cls, *args):
+    def apply(cls, *args, **kwargs):
         children = []
         requires_grad = grad_mode.is_grad_enabled()
         if requires_grad:
             for arg in args:
                 if prop_grad(arg):
                     op = _LeafOp(arg) if arg.op is None else arg.op
+                    children.append(op)
+                else:
+                    children.append(None)
+            for v in kwargs.values():
+                if prop_grad(v):
+                    op = _LeafOp(v) if v.op is None else v.op
                     children.append(op)
                 else:
                     children.append(None)
@@ -110,14 +114,14 @@ class Operator:
         self._cache.clear()
 
     def evaluate(self, *args, **kwargs):
-        value = _backend.get_backend().resolve(self, *args, **kwargs)
-        return variable.Variable(value)
+        return variable.Variable(
+            _backend.get_backend().resolve(self, *args, **kwargs))
 
     @classmethod
     def get_signature(cls):
-        sig = inspect.signature(cls.forward)
-        return sig.replace(
-            parameters=[param for param in sig.parameters.values()
+        signature = inspect.signature(cls.forward)
+        return signature.replace(
+            parameters=[param for param in signature.parameters.values()
                         if param.name != "self"])
 
 
