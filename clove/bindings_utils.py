@@ -61,7 +61,7 @@ def update_signature(sig: inspect.Signature) -> inspect.Signature:
                        return_annotation=variable.Variable)
 
 
-def creation_op_wrapper(fn):
+def creation_op_wrapper(fn, bk):
     @functools.wraps(fn)
     def runner(*args,
                requires_grad: bool = False,
@@ -75,7 +75,8 @@ def creation_op_wrapper(fn):
             if isinstance(v, variable.Variable):
                 kwargs[k] = v.data
         data = fn(*args, **kwargs)
-        return variable.Variable(data, requires_grad=requires_grad, name=name)
+        return variable.Variable(
+            data, backend=bk, requires_grad=requires_grad, name=name)
 
     if not isinstance(fn, types.BuiltinFunctionType):
         try:
@@ -117,5 +118,5 @@ def make_creation_ops():
     for bk_name, bk in _backend.backends():
         bk: _backend.Backend
         for op in bk.creation_routines():
-            ops[bk_name][op.__name__] = creation_op_wrapper(op)
+            ops[bk_name][op.__name__] = creation_op_wrapper(op, bk)
     return ops

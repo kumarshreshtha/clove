@@ -28,7 +28,8 @@ class Operator:
     def __init__(self,
                  children: Sequence[Operator] = (),
                  requires_grad: bool = False,
-                 variable: variable.Variable = None):
+                 variable: variable.Variable = None,
+                 backend: _backend.Backend = None):
 
         cls_name = self.__class__.__name__
 
@@ -52,6 +53,8 @@ class Operator:
         self._var_ref = weakref.ref(variable) if variable is not None else None
         self._cache = Cache()
         self.grad_store = self.GradStore()
+        self.backend = (
+            backend if backend is not None else _backend.get_backend())
 
     # TODO: when signature is None get it from backend?
     def __init_subclass__(
@@ -85,22 +88,25 @@ class Operator:
     def apply(cls, *args, **kwargs):
         children = []
         requires_grad = grad_mode.is_grad_enabled()
+        backend = None
         if requires_grad:
-            for arg in args:
+            inputs = [*args, *kwargs.values()]
+            for arg in inputs:
+                if isinstance(arg, variable.Variable):
+                    backend = arg.backend if backend is None else backend
+                    if backend != arg.backend:
+                        raise RuntimeError(
+                            "Conflicting backend types in inputs."
+                            f" {backend} vs {arg.backend}")
                 if prop_grad(arg):
                     op = _LeafOp(arg) if arg.op is None else arg.op
                     children.append(op)
                 else:
                     children.append(None)
-            for v in kwargs.values():
-                if prop_grad(v):
-                    op = _LeafOp(v) if v.op is None else v.op
-                    children.append(op)
-                else:
-                    children.append(None)
             requires_grad = any([child is not None for child in children])
         op = cls(children=children if requires_grad else [],
-                 requires_grad=requires_grad)
+                 requires_grad=requires_grad,
+                 backend=backend)
         # ops have their own backward. therefore the operations they do within
         #  their forward should be detached from the computation graph.
         with grad_mode.set_grad_enabled(False):
@@ -114,15 +120,15 @@ class Operator:
         self._cache.clear()
 
     def evaluate(self, *args, **kwargs):
-        return variable.Variable(
-            _backend.get_backend().resolve(self, *args, **kwargs))
+        return variable.Variable(self.backend.resolve(self, *args, **kwargs))
 
     @classmethod
     def get_signature(cls):
         signature = inspect.signature(cls.forward)
         return signature.replace(
             parameters=[param for param in signature.parameters.values()
-                        if param.name != "self"])
+                        if param.name != "self"],
+            return_annotation=variable.Variable)
 
 
 class _LeafOp(Operator, symbol="leaf"):

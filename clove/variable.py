@@ -35,6 +35,7 @@ class Variable:
 
     def __init__(self,
                  data,
+                 backend: _backend.Backend,
                  requires_grad=False,
                  name: str = None):
 
@@ -43,11 +44,16 @@ class Variable:
         self.requires_grad = requires_grad
         self.name = name
         self.op: Optional[operator.Operator] = None
+        self._backend = _backend
         self._retains_grad = False
 
     @property
     def data(self):
         return self._data
+
+    @property
+    def backend(self):
+        return self._backend
 
     @data.setter
     def data(self, value):
