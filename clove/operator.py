@@ -14,7 +14,11 @@ def prop_grad(inp):
     return isinstance(inp, variable.Variable) and inp.requires_grad
 
 
+fn_registry = {}
+
+
 class Operator:
+
     @dataclasses.dataclass
     class GradStore:
         value: Optional[variable.Variable] = None
@@ -56,11 +60,12 @@ class Operator:
         self.backend = (
             backend if backend is not None else backend_lib.get_backend())
 
-    # TODO: when signature is None get it from backend?
     def __init_subclass__(
             cls,
+            fn_name: Optional[str] = None,
             symbol: Optional[str] = None) -> None:
         cls.symbol = symbol if symbol is not None else cls.__name__
+        fn_registry[fn_name] = cls
 
     @property
     def next_ops(self):

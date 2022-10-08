@@ -8,12 +8,7 @@ if TYPE_CHECKING:
     from clove import variable
 
 
-# TODO: add something to throw errors on backend mismatch.
-# a variable will store it's creation backend.
-
-# TODO: make it easy to add backends and ops from outside clove
-class CloneOp(operator.Operator,
-              symbol="clone"):
+class CloneOp(operator.Operator, fn_name="clone"):
     def forward(self, x: variable.ArrayLike):
         return self.evaluate(x)
 
@@ -21,8 +16,7 @@ class CloneOp(operator.Operator,
         return grad_out
 
 
-class TransposeOp(operator.Operator,
-                  symbol="T"):
+class TransposeOp(operator.Operator, fn_name="transpose", symbol="T"):
 
     def forward(self, x: variable.ArrayLike, dim_0: int, dim_1: int):
         self._cache.d0 = dim_0
@@ -33,12 +27,9 @@ class TransposeOp(operator.Operator,
         return TransposeOp.apply(grad_out, self._cache.d1, self._cache.d0)
 
 
-class PermuteOp(operator.Operator):
+class PermuteOp(operator.Operator, fn_name="permute"):
 
-    def forward(self,
-                x: variable.ArrayLike,
-                dim: Sequence[int],
-                ):
+    def forward(self, x: variable.ArrayLike, dim: Sequence[int]):
         if self.requires_grad:
             self._cache.rev_dim = sorted(range(len(dim)), key=dim.__getitem__)
         return self.evaluate(x, dim)
@@ -47,8 +38,7 @@ class PermuteOp(operator.Operator):
         return PermuteOp.apply(grad_out, self._cache.rev_dim)
 
 
-class AddOp(operator.Operator,
-            symbol="+"):
+class AddOp(operator.Operator, fn_name="add", symbol="+"):
     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
         return self.evaluate(x1, x2)
 
@@ -56,8 +46,7 @@ class AddOp(operator.Operator,
         return grad_out, grad_out
 
 
-class MulOp(operator.Operator,
-            symbol="<&times;>"):
+class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
@@ -70,8 +59,7 @@ class MulOp(operator.Operator,
         return grad_x1, grad_x2
 
 
-class MatmulOp(operator.Operator,
-               symbol="@"):
+class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
     def forward(self, x1: variable.Variable, x2: variable.Variable):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
@@ -86,8 +74,7 @@ class MatmulOp(operator.Operator,
         return grad_x1, grad_x2
 
 
-class NegOp(operator.Operator,
-            symbol="-1*"):
+class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
     def forward(self, x: variable.ArrayLike):
         return self.evaluate(x)
 
@@ -95,8 +82,7 @@ class NegOp(operator.Operator,
         return NegOp.apply(grad_out)
 
 
-class MinusOp(operator.Operator,
-              symbol="-"):
+class MinusOp(operator.Operator, fn_name="subtract", symbol="-"):
     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
         return self.evaluate(x1, x2)
 
@@ -104,8 +90,7 @@ class MinusOp(operator.Operator,
         return grad_out, NegOp.apply(grad_out)
 
 
-class ExpOp(operator.Operator,
-            symbol="exp"):
+class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
     def forward(self, x: variable.ArrayLike):
         out = self.evaluate(x)
         self._cache.out = out
@@ -116,8 +101,7 @@ class ExpOp(operator.Operator,
         return MulOp.apply(out, grad_out) if out is not None else None
 
 
-class LogOp(operator.Operator,
-            symbol="ln"):
+class LogOp(operator.Operator, fn_name="log", symbol="ln"):
     def forward(self, x: variable.ArrayLike):
         self._cache.x = x
         return self.evaluate(x)
@@ -128,8 +112,7 @@ class LogOp(operator.Operator,
                 if x is not None else None)
 
 
-class PowOp(operator.Operator,
-            symbol="**"):
+class PowOp(operator.Operator, fn_name="power", symbol="**"):
     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
         out = self.evaluate(x1, x2)
         self._cache.x1 = (
@@ -151,8 +134,7 @@ class PowOp(operator.Operator,
         return x1_grad, x2_grad
 
 
-class SigmoidOp(operator.Operator,
-                symbol="<&sigma;>"):
+class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
     def forward(self, x: variable.ArrayLike):
         out = self.evaluate(x)
         self._cache.out = out
@@ -164,8 +146,7 @@ class SigmoidOp(operator.Operator,
                 if out is not None else None)
 
 
-class TanhOp(operator.Operator,
-             symbol="tanh"):
+class TanhOp(operator.Operator, fn_name="tanh", symbol="tanh"):
     def forward(self, x: variable.ArrayLike):
         out = self.evaluate(x)
         self._cache.out = out
