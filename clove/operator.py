@@ -1,7 +1,8 @@
 from __future__ import annotations
 import dataclasses
 
-from typing import Optional, Sequence, Union
+import inspect
+from typing import Optional, Sequence
 import weakref
 
 from clove import _backend
@@ -109,10 +110,15 @@ class Operator:
         self._cache.clear()
 
     def evaluate(self, *args, **kwargs):
-        binding = self.defn.value.signature.bind(*args, **kwargs)
-        binding.apply_defaults()
-        value = _backend.get_backend().resolve(self.defn, binding)
+        value = _backend.get_backend().resolve(self, *args, **kwargs)
         return variable.Variable(value)
+
+    @classmethod
+    def get_signature(cls):
+        sig = inspect.signature(cls.forward)
+        return sig.replace(
+            parameters=[param for param in sig.parameters.values()
+                        if param.name != "self"])
 
 
 class _LeafOp(Operator, symbol="leaf"):

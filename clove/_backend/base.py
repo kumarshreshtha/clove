@@ -14,7 +14,7 @@ class Backend:
         ...
 
     @abc.abstractclassmethod
-    def resolve(cls, defn, binding) -> Any:
+    def resolve(cls, op, *args, **kwargs) -> Any:
         ...
 
 

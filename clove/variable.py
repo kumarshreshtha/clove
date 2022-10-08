@@ -4,6 +4,7 @@ import warnings
 from clove import autodiff
 from clove import ops
 from clove import bindings_utils
+from clove import _backend
 
 if TYPE_CHECKING:
     from clove import operator

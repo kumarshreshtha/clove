@@ -27,11 +27,7 @@ def _copy_op(name, op: operator.Operator):
 
 def make_fn(name, op: operator.Operator):
     new_fn = _copy_op(name, op)
-    sig = inspect.signature(op.forward)
-    new_sig = sig.replace(
-        parameters=[param for param in sig.parameters.values()
-                    if param.name != "self"])
-    new_fn.__signature__ = new_sig
+    new_fn.__signature__ = op.get_signature()
     return new_fn
 
 
@@ -39,8 +35,8 @@ def make_method(name, op: operator.Operator):
     new_fn = _copy_op(name, op)
     sig = inspect.signature(op.forward)
     new_sig = sig.replace(
-        parameters=[param for param in sig.parameters.values()
-                    if param.name != "input"])
+        parameters=[param for i, param in enumerate(sig.parameters.values())
+                    if i != 1])
     new_fn.__signature__ = new_sig
     return new_fn
 
@@ -121,12 +117,3 @@ def make_creation_ops():
         for op in bk.creation_routines():
             ops[bk_name][op.__name__] = creation_op_wrapper(op)
     return ops
-
-
-# def bind_fn_association():
-#     ops = collections.defaultdict(dict)
-#     for bk_name, bk in backend.backends():
-#         bk: backend.Backend
-#         for op in bk.fn_associations():
-#             ops[bk_name][op.__name__] = make_creation_op(op)
-#     return ops
