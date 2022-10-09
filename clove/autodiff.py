@@ -60,7 +60,7 @@ def backward(output: variable.Variable,
              grad_output=None,
              retain_graph=False):
     with grad_mode.set_grad_enabled(False):
-        grad_output = (variable.Variable(1.)
+        grad_output = (variable.Variable(1., backend=output.backend)
                        if grad_output is None else grad_output)
         output.op.grad_store.update(grad_output)
         ordered_ops = _topological_order(output.op)

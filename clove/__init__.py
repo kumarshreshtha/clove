@@ -1,5 +1,5 @@
 from .grad_mode import set_grad_enabled, is_grad_enabled, no_grad
-from . import variable
+# from . import variable
 from . import autodiff
 from . import dot
 from . import backends

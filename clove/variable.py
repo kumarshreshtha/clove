@@ -1,3 +1,4 @@
+import enum
 import numbers
 from typing import TYPE_CHECKING, Any, Optional, Sequence, Union
 import warnings
@@ -10,22 +11,23 @@ from clove import backend as backend_lib
 if TYPE_CHECKING:
     from clove import operator
 
-# TODO: variable should have properties dtype, shape, size, numel etc
-# must form associations with the backend and not access them directly.
-# as that might break the compatibility with backend.
-
 # TODO: support variable subscription
 
 
 class Variable:
     """Container class for a variable and it's gradient."""
+    # class PROPERTIES_FROM_BACKEND(str, enum.Enum):
+    #     SHAPE = "shape"
+    #     DTYPE = "dtype"
+    #     NUMEL = "numel"
 
     def __init__(self,
                  data,
                  backend: backend_lib.Backend,
                  requires_grad=False,
                  name: str = None):
-
+        if isinstance(data, numbers.Number):
+            data = backend.make_from_number(data)
         self._data = data
         self._grad = None
         self.requires_grad = requires_grad
@@ -71,13 +73,6 @@ class Variable:
             return
         self._retains_grad = True
 
-    def __rsub__(self, other):
-        return other + (-self)
-
-    @property
-    def T(self):
-        return self.transpose()
-
     def is_leaf(self):
         return self.op is None
 
@@ -91,6 +86,19 @@ class Variable:
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
         return f"{self.__class__.__name__}({self.data}{grad_repr})"
 
+    # TODO: add resolve device.
+    @property
+    def shape(self):
+        return self.backend.resolve_shape(self.data)
+
+    @property
+    def dtype(self):
+        return self.backend.resolve_dtype(self.data)
+
+    @property
+    def numel(self):
+        return self.backend.resolve_numel(self.data)
+
     __add__ = binding_utils.make_method("__add__", ops.AddOp)
     __radd__ = binding_utils.make_method("__radd__", ops.AddOp)
     __mul__ = binding_utils.make_method("__mul__", ops.MulOp)
@@ -103,6 +111,13 @@ class Variable:
     exp = binding_utils.make_method("exp", ops.ExpOp)
     tanh = binding_utils.make_method("tanh", ops.TanhOp)
     transpose = binding_utils.make_method("transpose", ops.TransposeOp)
+
+    def __rsub__(self, other):
+        return other + (-self)
+
+    @property
+    def T(self):
+        return self.transpose()
 
 
 ArrayLike = Union[

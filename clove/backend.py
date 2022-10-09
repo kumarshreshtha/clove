@@ -13,8 +13,30 @@ class Backend:
         cls.backends[name] = cls
 
     @abc.abstractclassmethod
-    def resolve(cls, op, *args, **kwargs) -> Any:
+    def resolve(cls, op, *args, **kwargs):
         ...
+
+    @abc.abstractclassmethod
+    def resolve_shape(cls, data):
+        ...
+
+    # TODO: define your own dtypes will be easier for comparision.
+    @abc.abstractclassmethod
+    def resolve_dtype(cls, data):
+        ...
+
+    @abc.abstractclassmethod
+    def resolve_numel(cls, data):
+        ...
+
+    @abc.abstractclassmethod
+    def make_from_number(cls, data):
+        ...
+
+    # TODO: add this when ready for gpu support
+    # @abc.abstractclassmethod
+    # def resolve_device(cls, data) -> Any:
+    #     ...
 
     @classmethod
     def current_backend(cls) -> Backend:

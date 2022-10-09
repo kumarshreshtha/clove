@@ -58,3 +58,19 @@ class Numpy(backend.Backend, name="numpy"):
     @classmethod
     def resolve(cls, op, *args, **kwargs):
         return cls._OPS[op](*args, **kwargs)
+
+    @classmethod
+    def resolve_shape(cls, data):
+        return data.shape
+
+    @classmethod
+    def resolve_dtype(cls, data):
+        return data.dtype
+
+    @classmethod
+    def resolve_numel(cls, data):
+        return data.size
+
+    @classmethod
+    def make_from_number(cls, data):
+        return np.array(data)

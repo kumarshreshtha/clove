@@ -125,6 +125,7 @@ class Operator:
     def clear_cache(self):
         self._cache.clear()
 
+    # TODO: send tha .data to the backend instead.
     def evaluate(self, *args, **kwargs):
         return variable.Variable(
             self.backend.resolve(self.__class__, *args, **kwargs),
