@@ -14,26 +14,11 @@ if TYPE_CHECKING:
 # must form associations with the backend and not access them directly.
 # as that might break the compatibility with backend.
 
-# TODO: support variable subcription
+# TODO: support variable subscription
 
 
 class Variable:
     """Container class for a variable and it's gradient."""
-
-    METHODS_FROM_OPS = dict(
-        __add__=ops.AddOp,
-        __radd__=ops.AddOp,
-        __mul__=ops.MulOp,
-        __rmul__=ops.MulOp,
-        __sub__=ops.MinusOp,
-        __neg__=ops.NegOp,
-        __pow__=ops.PowOp,
-        __matmul__=ops.MatmulOp,
-        sigmoid=ops.SigmoidOp,
-        exp=ops.ExpOp,
-        tanh=ops.TanhOp,
-        transpose=ops.TransposeOp
-    )
 
     def __init__(self,
                  data,
@@ -106,11 +91,19 @@ class Variable:
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
         return f"{self.__class__.__name__}({self.data}{grad_repr})"
 
+    __add__ = binding_utils.make_method("__add__", ops.AddOp)
+    __radd__ = binding_utils.make_method("__radd__", ops.AddOp)
+    __mul__ = binding_utils.make_method("__mul__", ops.MulOp)
+    __rmul__ = binding_utils.make_method("__rmul__", ops.MulOp)
+    __sub__ = binding_utils.make_method("__sub__", ops.MinusOp)
+    __neg__ = binding_utils.make_method("__neg__", ops.NegOp)
+    __pow__ = binding_utils.make_method("__pow__", ops.PowOp)
+    __matmul__ = binding_utils.make_method("__matmul__", ops.MatmulOp)
+    sigmoid = binding_utils.make_method("sigmoid", ops.SigmoidOp)
+    exp = binding_utils.make_method("exp", ops.ExpOp)
+    tanh = binding_utils.make_method("tanh", ops.TanhOp)
+    transpose = binding_utils.make_method("transpose", ops.TransposeOp)
 
-for __method_name, __op in Variable.METHODS_FROM_OPS.items():
-    setattr(Variable,
-            __method_name,
-            binding_utils.make_method(__method_name, __op))
 
 ArrayLike = Union[
     numbers.Number,
