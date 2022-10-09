@@ -1,102 +1,34 @@
-from __future__ import annotations
+import numpy as _np
+from clove import binding_utils as _binding_utils
+from clove.backends import numpy_bk as _npbk
 
-import functools
-from typing import Sequence, Union
-import numpy as np
-
-from clove import backend
-from clove import ops
-from clove import variable
-from clove import binding_utils
-
-
-def get_data(array: variable.ArrayLike):
-    if isinstance(array, variable.Variable):
-        return array.data
-    return array
-
-
-def sigmoid(x: variable.ArrayLike):
-    return np.reciprocal(1 + np.exp(-get_data(x)))
-
-
-def transpose(x: variable.ArrayLike, dim0: int, dim1: int):
-    return np.transpose(get_data(x), axes=(dim0, dim1))
-
-
-def _resolve_unary(fn):
-    @functools.wraps(fn)
-    def wrapper(x: variable.ArrayLike,
-                dim: Union[int, Sequence[int], None] = None):
-        return fn(get_data(x)) if dim is None else fn(get_data(x), axis=dim)
-    return wrapper
-
-
-def _resolve_binary(fn):
-    @functools.wraps(fn)
-    def wrapper(x1: variable.ArrayLike,
-                x2: variable.ArrayLike):
-        return fn(get_data(x1), get_data(x2))
-    return wrapper
-
-
-class Numpy(backend.Backend, name="numpy"):
-    MODULE = np
-
-    _CREATION_ROUTINES = (
-        np.empty,
-        np.empty_like,
-        np.eye,
-        np.identity,
-        np.ones,
-        np.ones_like,
-        np.zeros,
-        np.zeros_like,
-        np.full,
-        np.full_like,
-        np.array,
-        np.asarray,
-        np.asanyarray,
-        np.ascontiguousarray,
-        np.frombuffer,
-        np.fromfile,
-        np.fromfunction,
-        np.fromiter,
-        np.arange,
-        np.linspace,
-        np.logspace,
-        np.geomspace,
-        np.meshgrid,
-        np.diag,
-        np.diagflat,
-        np.tri,
-        np.tril,
-        np.triu,
-        np.vander
-    )
-    _OPS = {ops.CloneOp: _resolve_unary(np.copy),
-            ops.AddOp: _resolve_binary(np.add),
-            ops.ExpOp: _resolve_unary(np.exp),
-            ops.LogOp: _resolve_unary(np.log),
-            ops.MatmulOp: _resolve_binary(np.matmul),
-            ops.MulOp: _resolve_binary(np.multiply),
-            ops.NegOp: _resolve_unary(np.negative),
-            ops.PowOp: _resolve_binary(np.power),
-            ops.SigmoidOp: sigmoid,
-            ops.MinusOp: _resolve_binary(np.subtract),
-            ops.TanhOp: _resolve_unary(np.tanh),
-            ops.TransposeOp: transpose,
-            ops.PermuteOp: _resolve_unary(np.transpose)
-            }
-
-    @classmethod
-    def creation_routines(cls):
-        return cls._CREATION_ROUTINES
-
-    @classmethod
-    def resolve(cls, op, *args, **kwargs):
-        return cls._OPS[op](*args, **kwargs)
-
-    @classmethod
-    def module(cls):
-        return cls.MODULE
+empty = _binding_utils.wrap_creation_op(_np.empty, _npbk.Numpy)
+empty_like = _binding_utils.wrap_creation_op(_np.empty_like, _npbk.Numpy)
+eye = _binding_utils.wrap_creation_op(_np.eye, _npbk.Numpy)
+identity = _binding_utils.wrap_creation_op(_np.identity, _npbk.Numpy)
+ones = _binding_utils.wrap_creation_op(_np.ones, _npbk.Numpy)
+ones_like = _binding_utils.wrap_creation_op(_np.ones_like, _npbk.Numpy)
+zeros = _binding_utils.wrap_creation_op(_np.zeros, _npbk.Numpy)
+zeros_like = _binding_utils.wrap_creation_op(_np.zeros_like, _npbk.Numpy)
+full = _binding_utils.wrap_creation_op(_np.full, _npbk.Numpy)
+full_like = _binding_utils.wrap_creation_op(_np.full_like, _npbk.Numpy)
+array = _binding_utils.wrap_creation_op(_np.array, _npbk.Numpy)
+asarray = _binding_utils.wrap_creation_op(_np.asarray, _npbk.Numpy)
+asanyarray = _binding_utils.wrap_creation_op(_np.asanyarray, _npbk.Numpy)
+ascontiguousarray = _binding_utils.wrap_creation_op(_np.ascontiguousarray,
+                                                    _npbk.Numpy)
+frombuffer = _binding_utils.wrap_creation_op(_np.frombuffer, _npbk.Numpy)
+fromfile = _binding_utils.wrap_creation_op(_np.fromfile, _npbk.Numpy)
+fromfunction = _binding_utils.wrap_creation_op(_np.fromfunction, _npbk.Numpy)
+fromiter = _binding_utils.wrap_creation_op(_np.fromiter, _npbk.Numpy)
+arange = _binding_utils.wrap_creation_op(_np.arange, _npbk.Numpy)
+linspace = _binding_utils.wrap_creation_op(_np.linspace, _npbk.Numpy)
+logspace = _binding_utils.wrap_creation_op(_np.logspace, _npbk.Numpy)
+geomspace = _binding_utils.wrap_creation_op(_np.geomspace, _npbk.Numpy)
+meshgrid = _binding_utils.wrap_creation_op(_np.meshgrid, _npbk.Numpy)
+diag = _binding_utils.wrap_creation_op(_np.diag, _npbk.Numpy)
+diagflat = _binding_utils.wrap_creation_op(_np.diagflat, _npbk.Numpy)
+tri = _binding_utils.wrap_creation_op(_np.tri, _npbk.Numpy)
+tril = _binding_utils.wrap_creation_op(_np.tril, _npbk.Numpy)
+triu = _binding_utils.wrap_creation_op(_np.triu, _npbk.Numpy)
+vander = _binding_utils.wrap_creation_op(_np.vander, _npbk.Numpy)

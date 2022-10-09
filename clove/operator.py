@@ -66,6 +66,7 @@ class Operator:
         cls.symbol = symbol if symbol is not None else cls.__name__
         if fn_name is not None:
             fn_registry[fn_name] = cls
+            cls.fn_name = fn_name
 
     @property
     def next_ops(self):
@@ -79,7 +80,7 @@ class Operator:
     def variable(self, value):
         self._var_ref = weakref.ref(value)
 
-    def forward(self, *args, **kwargs):
+    def forward(self, *args, **kwargs) -> variable.Variable:
         raise NotImplementedError(
             f"forward pass for {self.__class__.__name__} has not been"
             " implemented")

@@ -13,14 +13,6 @@ class Backend:
         cls.backends[name] = cls
 
     @abc.abstractclassmethod
-    def creation_routines(cls) -> Sequence[Callable]:
-        ...
-
-    @abc.abstractclassmethod
-    def module(cls) -> Sequence[Callable]:
-        ...
-
-    @abc.abstractclassmethod
     def resolve(cls, op, *args, **kwargs) -> Any:
         ...
 
@@ -40,12 +32,6 @@ def backends():
     yield from Backend.backends.items()
 
 
-def backend_from_name(name: str):
-    if not name in Backend.backends:
-        raise ValueError(f"backend {name} is not registered.")
-    return Backend.backends[name]
-
-
 def has_backend(name: str):
     return name in Backend.backends
 
@@ -55,4 +41,6 @@ def get_backend():
 
 
 def set_backend(name, /):
+    if not name in Backend.backends:
+        raise ValueError(f"backend {name} is not registered.")
     Backend.set_backend(Backend.backends[name])

@@ -10,6 +10,9 @@ from typing import TYPE_CHECKING, Optional
 from clove import operator
 from clove import variable
 
+if TYPE_CHECKING:
+    from clove import backend
+
 
 def get_op_signature(cls: operator.Operator):
     signature = inspect.signature(cls.forward)
@@ -34,8 +37,8 @@ def _copy_op(name, op: operator.Operator):
     return new_fn
 
 
-def make_fn(name, op: operator.Operator):
-    new_fn = _copy_op(name, op)
+def make_fn(op: operator.Operator):
+    new_fn = _copy_op(op.fn_name, op)
     new_fn.__signature__ = get_op_signature(op)
     new_fn._op = op
     return new_fn
@@ -71,7 +74,7 @@ def update_signature(sig: inspect.Signature) -> inspect.Signature:
                        return_annotation=variable.Variable)
 
 
-def wrap_creation_op(fn, bk):
+def wrap_creation_op(fn, bk: backend.Backend):
     @functools.wraps(fn)
     def wrapper(*args,
                 requires_grad: bool = False,
@@ -130,7 +133,7 @@ def generate_static_op_bindings(filename="_op_bindings.py",
 
     """)
     bindings = "\n".join([
-        f"{name} = binding_utils.make_fn('{name}', ops.{op.__name__})"
+        f"{name} = binding_utils.make_fn(ops.{op.__name__})"
         for name, op in operator.fn_registry.items()
     ])
 

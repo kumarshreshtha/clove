@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 # must form associations with the backend and not access them directly.
 # as that might break the compatibility with backend.
 
+# TODO: support variable subcription
+
 
 class Variable:
     """Container class for a variable and it's gradient."""
