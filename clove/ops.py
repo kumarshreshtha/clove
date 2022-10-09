@@ -7,6 +7,8 @@ from clove import operator
 if TYPE_CHECKING:
     from clove import variable
 
+# TODO: reduction ops: sum, mean.
+
 
 class CloneOp(operator.Operator, fn_name="clone"):
     def forward(self, x: variable.ArrayLike) -> variable.Variable:

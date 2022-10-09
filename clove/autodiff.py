@@ -60,6 +60,9 @@ def backward(output: variable.Variable,
              grad_output=None,
              retain_graph=False):
     with grad_mode.set_grad_enabled(False):
+        if grad_output is None and output.shape != (1,):
+            raise RuntimeError(
+                "grad can be implicitely created only for scalar outputs.")
         grad_output = (variable.Variable(1., backend=output.backend)
                        if grad_output is None else grad_output)
         output.op.grad_store.update(grad_output)
@@ -85,8 +88,9 @@ def grad(outputs: Union[variable.Variable, Sequence[variable.Variable]],
             f" lengths {len(grad_outputs)} and {len(outputs)} instead. ")
     with grad_mode.set_grad_enabled(create_graph):
         for i, (out, g_out) in enumerate(zip(outputs, grad_outputs)):
-            # TODO: need to check output shapes, only make default gradients
-            # for scalars.
+            if g_out is None and out.shape != (1,):
+                raise RuntimeError(
+                    "grad can be implicitely created only for scalar outputs.")
             grad_outputs[i] = (
                 variable.Variable(1., requires_grad=create_graph)
                 if g_out is None else g_out)
