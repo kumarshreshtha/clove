@@ -16,10 +16,6 @@ if TYPE_CHECKING:
 
 class Variable:
     """Container class for a variable and it's gradient."""
-    # class PROPERTIES_FROM_BACKEND(str, enum.Enum):
-    #     SHAPE = "shape"
-    #     DTYPE = "dtype"
-    #     NUMEL = "numel"
 
     def __init__(self,
                  data,
