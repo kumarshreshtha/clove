@@ -1,20 +1,38 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
 
 from clove import operator
 
 if TYPE_CHECKING:
     from clove import variable
 
-# TODO: reduction ops: sum, mean.
+
+def resolve_dims_for_reduction(dims, total_dims):
+    if isinstance(dims, int):
+        dims = (dims, )
+    if dims is None:
+        return tuple(range(total_dims))
+    return tuple(total_dims + d if d < 0 else d for d in dims)
+
+
+def resolve_shape_for_expansion(new_shape, old_shape):
+    leading_dims = len(new_shape) - len(old_shape)
+    if any([d == -1 for d in new_shape[:leading_dims]]):
+        raise RuntimeError("expanded size of the tensor (-1) isn't allowed in"
+                           " a leading, non-existing dimension")
+    return (new_shape[:leading_dims] +
+            tuple([old_shape[i] if d == -1 else d
+                   for i, d in enumerate(new_shape[leading_dims:])]))
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
-    def forward(self, x: variable.Variable, shape):
-        # TODO: add support for -1
-        self._cache.reduction_dim = list(range(0, len(shape) - len(x.shape)))
-        self.evaluate(x, shape)
+    def forward(self,
+                x: variable.Variable,
+                shape: Union[int, Tuple[int, ...]]):
+        shape = resolve_shape_for_expansion(shape, x.shape)
+        self._cache.reduction_dim = tuple(range(0, len(shape) - len(x.shape)))
+        return self.evaluate(x, shape)
 
     def backward(self, grad_out):
         if not self._cache.reduction_dim:
@@ -23,15 +41,17 @@ class ExpandOp(operator.Operator, fn_name="expand"):
 
 
 class SumOp(operator.Operator, fn_name="sum"):
+
     def forward(self,
                 x: variable.Variable,
-                dim: Union[int, Sequence[int], None] = None
+                dim: Union[int, Tuple[int, ...], None] = None
                 ) -> variable.Variable:
-        self._cache.dim = (dim if dim is not None else x.shape)
+        dim = resolve_dims_for_reduction(dim, len(x.shape))
+        self._cache.shape = x.shape
         return self.evaluate(x, dim)
 
     def backward(self, grad_out):
-        return ExpandOp.apply(grad_out, self._cache.dim)
+        return ExpandOp.apply(grad_out, self._cache.shape)
 
 
 class CloneOp(operator.Operator, fn_name="clone"):

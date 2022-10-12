@@ -116,7 +116,7 @@ class Operator:
         # ops have their own backward. therefore the operations they do within
         #  their forward should be detached from the computation graph.
         with grad_mode.set_grad_enabled(False):
-            out = op.forward(*args)
+            out = op.forward(*args, **kwargs)
         out.requires_grad = requires_grad
         out.op = op if requires_grad else None
         op.variable = out

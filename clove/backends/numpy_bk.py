@@ -27,7 +27,7 @@ def _resolve_unary(fn):
     @functools.wraps(fn)
     def wrapper(x: variable.ArrayLike,
                 dim: Union[int, Sequence[int], None] = None):
-        return fn(get_data(x)) if dim is None else fn(get_data(x), axis=dim)
+        return fn(get_data(x)) if dim is None else fn(get_data(x), dim)
     return wrapper
 
 
@@ -43,6 +43,7 @@ class Numpy(backend.Backend, name="numpy"):
     _OPS = {ops.CloneOp: _resolve_unary(np.copy),
             ops.AddOp: _resolve_binary(np.add),
             ops.ExpOp: _resolve_unary(np.exp),
+            ops.ExpandOp: _resolve_unary(np.broadcast_to),
             ops.LogOp: _resolve_unary(np.log),
             ops.MatmulOp: _resolve_binary(np.matmul),
             ops.MulOp: _resolve_binary(np.multiply),
@@ -50,6 +51,7 @@ class Numpy(backend.Backend, name="numpy"):
             ops.PowOp: _resolve_binary(np.power),
             ops.SigmoidOp: sigmoid,
             ops.MinusOp: _resolve_binary(np.subtract),
+            ops.SumOp: _resolve_unary(np.sum),
             ops.TanhOp: _resolve_unary(np.tanh),
             ops.TransposeOp: transpose,
             ops.PermuteOp: _resolve_unary(np.transpose)

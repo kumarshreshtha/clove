@@ -95,6 +95,9 @@ class Variable:
     def numel(self):
         return self.backend.resolve_numel(self.data)
 
+    def is_scalar(self):
+        return self.shape == tuple() or self.shape == (1,)
+
     __add__ = binding_utils.make_method("__add__", ops.AddOp)
     __radd__ = binding_utils.make_method("__radd__", ops.AddOp)
     __mul__ = binding_utils.make_method("__mul__", ops.MulOp)

@@ -60,7 +60,7 @@ def backward(output: variable.Variable,
              grad_output=None,
              retain_graph=False):
     with grad_mode.set_grad_enabled(False):
-        if grad_output is None and output.shape != (1,):
+        if grad_output is None and not output.is_scalar():
             raise RuntimeError(
                 "grad can be implicitely created only for scalar outputs.")
         grad_output = (variable.Variable(1., backend=output.backend)
