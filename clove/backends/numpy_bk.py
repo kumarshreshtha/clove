@@ -46,6 +46,7 @@ class Numpy(backend.Backend, name="numpy"):
             ops.ExpandOp: _resolve_unary(np.broadcast_to),
             ops.LogOp: _resolve_unary(np.log),
             ops.MatmulOp: _resolve_binary(np.matmul),
+            ops.MeanOp: _resolve_unary(np.mean),
             ops.MulOp: _resolve_binary(np.multiply),
             ops.NegOp: _resolve_unary(np.negative),
             ops.PowOp: _resolve_binary(np.power),

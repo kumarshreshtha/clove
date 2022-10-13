@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
 
 from clove import operator
@@ -14,6 +15,8 @@ def resolve_dims_for_reduction(dims, total_dims):
     if dims is None:
         return tuple(range(total_dims))
     return tuple(total_dims + d if d < 0 else d for d in dims)
+
+# TODO: throw an error when shapes don't match for the trailing dims.
 
 
 def resolve_shape_for_expansion(new_shape, old_shape):
@@ -39,6 +42,8 @@ class ExpandOp(operator.Operator, fn_name="expand"):
             return grad_out
         return SumOp.apply(grad_out, dim=self._cache.reduction_dim)
 
+# TODO: add support for keep_dims.
+
 
 class SumOp(operator.Operator, fn_name="sum"):
 
@@ -52,6 +57,21 @@ class SumOp(operator.Operator, fn_name="sum"):
 
     def backward(self, grad_out):
         return ExpandOp.apply(grad_out, self._cache.shape)
+
+
+class MeanOp(operator.Operator, fn_name="mean"):
+    def forward(self,
+                x: variable.Variable,
+                dim: Union[int, Tuple[int, ...], None] = None
+                ) -> variable.Variable:
+        dim = resolve_dims_for_reduction(dim, len(x.shape))
+        self._cache.shape = x.shape
+        self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
+        return self.evaluate(x, dim)
+
+    def backward(self, grad_out):
+        return MulOp.apply(ExpandOp.apply(grad_out, self._cache.shape),
+                           self._cache.div)
 
 
 class CloneOp(operator.Operator, fn_name="clone"):
@@ -82,6 +102,8 @@ class PermuteOp(operator.Operator, fn_name="permute"):
 
     def backward(self, grad_out: variable.Variable):
         return PermuteOp.apply(grad_out, self._cache.rev_dim)
+
+# TODO: account for broadcasting of arrays
 
 
 class AddOp(operator.Operator, fn_name="add", symbol="+"):
