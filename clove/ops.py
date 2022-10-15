@@ -74,6 +74,20 @@ class MeanOp(operator.Operator, fn_name="mean"):
                            self._cache.div)
 
 
+class ProdOp(operator.Operator, fn_name="prod"):
+    def forward(self,
+                x: variable.Variable,
+                dim: Union[int, Tuple[int, ...], None] = None
+                ) -> variable.Variable:
+        dim = resolve_dims_for_reduction(dim, len(x.shape))
+        self._cache.shape = x.shape
+        self._cache.dim = dim
+        out = self.evaluate(x, dim)
+        # TODO: this has to be done in the backward or higher order derivatives
+        # won't be possible.
+        self._cache.partial_grad = ExpandOp.apply(out, x.shape)
+
+
 class CloneOp(operator.Operator, fn_name="clone"):
     def forward(self, x: variable.ArrayLike) -> variable.Variable:
         return self.evaluate(x)
@@ -125,6 +139,36 @@ class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
         grad_x1 = MulOp.apply(x2, grad_out) if x2 is not None else None
         grad_x2 = MulOp.apply(x1, grad_out) if x1 is not None else None
         return grad_x1, grad_x2
+
+
+class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
+    def forward(self, x: variable.ArrayLike):
+        out = self.evaluate(x)
+        self._cache.out = out
+        return out
+
+    def backward(self, grad_out: variable.Variable):
+        out_sq = NegOp.apply(PowOp.apply(self._cache.out, 2))
+        return MulOp.apply(grad_out, out_sq)
+
+
+# class DivOp(operator.Operator, fn_name="divide"):
+#     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+#         self._cache.x1 = x1 if operator.prop_grad(x2) else None
+#         self._cache.x2_rec = ReciprocalOp.apply(
+#             x2) if operator.prop_grad(x1) else None
+#         return self.evaluate(x1, x2)
+
+#     def backward(self, grad_out: variable.Variable):
+#         x1, x2_rec = self._cache.x1, self._cache.x2_rec
+#         grad_x1 = grad_x2 = None
+#         if x2_rec is not None:
+#             grad_x1 = MulOp.apply(, grad_out)
+#         if x1 is not None:
+#             grad_x2 = ...
+#         grad_x1 = MulOp.apply(x2, grad_out) else None
+#         grad_x2 = MulOp.apply(x1, grad_out) if x1 is not None else None
+#         return grad_x1, grad_x2
 
 
 class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
