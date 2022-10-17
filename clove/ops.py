@@ -84,9 +84,17 @@ class ProdOp(operator.Operator, fn_name="prod"):
         self._cache.shape = x.shape
         self._cache.dim = dim
         out = self.evaluate(x, dim)
-        # TODO: this has to be done in the backward or higher order derivatives
-        # won't be possible.
-        self._cache.partial_grad = ExpandOp.apply(out, x.shape)
+        self._cache.x = x
+        self._cache.out = out
+        self._cache.dim = dim
+        return out
+
+    def backward(self, grad_output):
+        out = self._cache.out
+        x = self._cache.x
+        # TODO: fix the broadcasting issue later. We need a reshape op
+        dim = self._cache.dim
+        return MulOp.apply(DivOp.apply(ExpandOp.apply(out, x.shape), x))
 
 
 class CloneOp(operator.Operator, fn_name="clone"):
