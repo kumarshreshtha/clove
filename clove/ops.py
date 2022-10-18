@@ -94,7 +94,8 @@ class ProdOp(operator.Operator, fn_name="prod"):
         x = self._cache.x
         # TODO: fix the broadcasting issue later. We need a reshape op
         dim = self._cache.dim
-        return MulOp.apply(DivOp.apply(ExpandOp.apply(out, x.shape), x))
+        return MulOp.apply(DivOp.apply(
+            ExpandOp.apply(out, x.shape), x), grad_output)
 
 
 class CloneOp(operator.Operator, fn_name="clone"):
