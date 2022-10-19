@@ -19,6 +19,24 @@ def resolve_dims_for_reduction(dims, total_dims):
 # TODO: throw an error when shapes don't match for the trailing dims.
 
 
+def broadcast_shapes(x1, x2):
+    x1_shape = [1] * max(len(x2.shape) - len(x1.shape), 0) + list(x1.shape)
+    x2_shape = [1] * max(len(x1.shape) - len(x2.shape), 0) + list(x2.shape)
+    common_shape = []
+    for d1, d2 in reversed(list(zip(x1_shape, x2_shape))):
+        if d1 == d2:
+            common_shape.append(d1)
+        elif d1 == 1 and d2 != 1:
+            common_shape.append(d2)
+        elif d2 == 1 and d1 != 1:
+            common_shape.append(d1)
+        else:
+            raise ValueError(
+                f"Cannot broadcast operands with shape {x1.shape} {x2.shape}")
+    common_shape.reverse()
+    return common_shape
+
+
 def resolve_shape_for_expansion(new_shape, old_shape):
     leading_dims = len(new_shape) - len(old_shape)
     if any([d == -1 for d in new_shape[:leading_dims]]):
@@ -132,6 +150,8 @@ class PermuteOp(operator.Operator, fn_name="permute"):
 
 class AddOp(operator.Operator, fn_name="add", symbol="+"):
     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+        x1.shape
+        x2.shape
         return self.evaluate(x1, x2)
 
     def backward(self, grad_out: Optional[variable.ArrayLike]):
