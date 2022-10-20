@@ -11,12 +11,14 @@ if TYPE_CHECKING:
 
 def resolve_dims_for_reduction(dims, total_dims):
     if isinstance(dims, int):
-        dims = (dims, )
+        return resolve_dims_for_reduction((dims, ), total_dims)
     if dims is None:
         return tuple(range(total_dims))
     return tuple(total_dims + d if d < 0 else d for d in dims)
 
 # TODO: throw an error when shapes don't match for the trailing dims.
+# TODO: how to handle non arrays?
+# should we convert to arrays implicitely?
 
 
 def broadcast_shapes(x1, x2):
@@ -34,7 +36,7 @@ def broadcast_shapes(x1, x2):
             raise ValueError(
                 f"Cannot broadcast operands with shape {x1.shape} {x2.shape}")
     common_shape.reverse()
-    return common_shape
+    return tuple(common_shape)
 
 
 def resolve_shape_for_expansion(new_shape, old_shape):
@@ -71,6 +73,7 @@ class SumOp(operator.Operator, fn_name="sum"):
                 dim: Union[int, Tuple[int, ...], None] = None
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
+        self._cache.dim = dim
         self._cache.shape = x.shape
         return self.evaluate(x, dim)
 
