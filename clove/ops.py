@@ -66,6 +66,37 @@ class ExpandOp(operator.Operator, fn_name="expand"):
 # TODO: keep track of dim to know what dimension to expand in.
 
 
+def resolve_shape(x, shape: Sequence[int]):
+    shape = list(shape)
+    idx_minus_one = None
+    numel = 1
+    for i, s in enumerate(shape):
+        if s == -1:
+            if idx_minus_one is not None:
+                raise ValueError()
+            idx_minus_one = i
+        else:
+            numel *= s
+    if idx_minus_one is not None:
+        if x.numel % numel:
+            raise ValueError(
+                f"cannot reshape array of size {x.numel} into shape {shape}")
+        shape[shape.index(-1)] = x.numel // numel
+    return shape
+
+
+class ReshapeOp(operator.Operator, fn_name="squeeze"):
+    def forward(self,
+                x: variable.Variable,
+                shape: Tuple[int, ...]):
+        shape = resolve_shape(x, shape)
+        self._cache.shape = x.shape
+        return self.evaluate(x, shape)
+
+    def backward(self, grad_output: variable.Variable):
+        return ReshapeOp.apply(grad_output, self._cache.shape)
+
+
 class SumOp(operator.Operator, fn_name="sum"):
 
     def forward(self,
