@@ -97,6 +97,10 @@ class ReshapeOp(operator.Operator, fn_name="squeeze"):
         return ReshapeOp.apply(grad_output, self._cache.shape)
 
 
+def expand_dims(shape, dims):
+    return [s if i not in dims else 1 for i, s in shape]
+
+
 class SumOp(operator.Operator, fn_name="sum"):
 
     def forward(self,
@@ -109,7 +113,9 @@ class SumOp(operator.Operator, fn_name="sum"):
         return self.evaluate(x, dim)
 
     def backward(self, grad_out):
-        return ExpandOp.apply(grad_out, self._cache.shape)
+        expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
+        return ExpandOp.apply(
+            ReshapeOp.apply(grad_out, expanded_shape), self._cache.shape)
 
 
 class MeanOp(operator.Operator, fn_name="mean"):
@@ -119,6 +125,7 @@ class MeanOp(operator.Operator, fn_name="mean"):
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
         self._cache.shape = x.shape
+        self._cache.dim = x.shape
         self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
         return self.evaluate(x, dim)
 
