@@ -125,13 +125,15 @@ class MeanOp(operator.Operator, fn_name="mean"):
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
         self._cache.shape = x.shape
-        self._cache.dim = x.shape
+        self._cache.dim = dim
         self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
         return self.evaluate(x, dim)
 
     def backward(self, grad_out):
-        return MulOp.apply(ExpandOp.apply(grad_out, self._cache.shape),
-                           self._cache.div)
+        expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
+        grad_out = ExpandOp.apply(ReshapeOp.apply(grad_out, expanded_shape),
+                                  self._cache.shape)
+        return MulOp.apply(grad_out, self._cache.div)
 
 
 class ProdOp(operator.Operator, fn_name="prod"):
@@ -140,8 +142,6 @@ class ProdOp(operator.Operator, fn_name="prod"):
                 dim: Union[int, Tuple[int, ...], None] = None
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
-        self._cache.shape = x.shape
-        self._cache.dim = dim
         out = self.evaluate(x, dim)
         self._cache.x = x
         self._cache.out = out
@@ -151,10 +151,9 @@ class ProdOp(operator.Operator, fn_name="prod"):
     def backward(self, grad_output):
         out = self._cache.out
         x = self._cache.x
-        # TODO: fix the broadcasting issue later. We need a reshape op
-        dim = self._cache.dim
-        return MulOp.apply(DivOp.apply(
-            ExpandOp.apply(out, x.shape), x), grad_output)
+        expanded_shape = expand_dims(x.shape, self._cache.dim)
+        grad = DivOp.apply(ReshapeOp.apply(out, expanded_shape), x)
+        return MulOp.apply(grad, grad_output)
 
 
 class CloneOp(operator.Operator, fn_name="clone"):
@@ -191,8 +190,6 @@ class PermuteOp(operator.Operator, fn_name="permute"):
 
 class AddOp(operator.Operator, fn_name="add", symbol="+"):
     def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
-        x1.shape
-        x2.shape
         return self.evaluate(x1, x2)
 
     def backward(self, grad_out: Optional[variable.ArrayLike]):
