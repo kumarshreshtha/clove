@@ -119,9 +119,7 @@ class Variable:
         return self.transpose()
 
 
-ArrayLike = Union[
+ArrayOrScalar = Union[
     numbers.Number,
-    Sequence[numbers.Number],
-    Sequence[Sequence[Any]],
     Variable,
 ]

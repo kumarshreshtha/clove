@@ -24,19 +24,24 @@ def resolve_dims_for_reduction(dims, total_dims):
 def broadcast_shapes(x1, x2):
     x1_shape = [1] * max(len(x2.shape) - len(x1.shape), 0) + list(x1.shape)
     x2_shape = [1] * max(len(x1.shape) - len(x2.shape), 0) + list(x2.shape)
+    ndims = len(x1_shape)
     common_shape = []
-    for d1, d2 in reversed(list(zip(x1_shape, x2_shape))):
+    x1_reduction_dims = []
+    x2_reduction_dims = []
+    for i, (d1, d2) in enumerate(reversed(list(zip(x1_shape, x2_shape)))):
         if d1 == d2:
             common_shape.append(d1)
         elif d1 == 1 and d2 != 1:
             common_shape.append(d2)
+            x1_reduction_dims.append(ndims - i - 1)
         elif d2 == 1 and d1 != 1:
             common_shape.append(d1)
+            x2_reduction_dims.append(ndims - i - 1)
         else:
             raise ValueError(
                 f"Cannot broadcast operands with shape {x1.shape} {x2.shape}")
     common_shape.reverse()
-    return tuple(common_shape)
+    return tuple(common_shape), x1_reduction_dims, x2_reduction_dims
 
 
 def resolve_shape_for_expansion(new_shape, old_shape):
@@ -47,6 +52,8 @@ def resolve_shape_for_expansion(new_shape, old_shape):
     return (new_shape[:leading_dims] +
             tuple([old_shape[i] if d == -1 else d
                    for i, d in enumerate(new_shape[leading_dims:])]))
+
+# TODO: account for 1 in shape dims.
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
@@ -157,7 +164,7 @@ class ProdOp(operator.Operator, fn_name="prod"):
 
 
 class CloneOp(operator.Operator, fn_name="clone"):
-    def forward(self, x: variable.ArrayLike) -> variable.Variable:
+    def forward(self, x: variable.ArrayOrScalar) -> variable.Variable:
         return self.evaluate(x)
 
     def backward(self, grad_out: variable.Variable):
@@ -166,7 +173,7 @@ class CloneOp(operator.Operator, fn_name="clone"):
 
 class TransposeOp(operator.Operator, fn_name="transpose", symbol="T"):
 
-    def forward(self, x: variable.ArrayLike, dim_0: int, dim_1: int):
+    def forward(self, x: variable.ArrayOrScalar, dim_0: int, dim_1: int):
         self._cache.d0 = dim_0
         self._cache.d1 = dim_1
         return self.evaluate(x, dim_0, dim_1)
@@ -177,7 +184,7 @@ class TransposeOp(operator.Operator, fn_name="transpose", symbol="T"):
 
 class PermuteOp(operator.Operator, fn_name="permute"):
 
-    def forward(self, x: variable.ArrayLike, dim: Sequence[int]):
+    def forward(self, x: variable.ArrayOrScalar, dim: Sequence[int]):
         if self.requires_grad:
             self._cache.rev_dim = sorted(range(len(dim)), key=dim.__getitem__)
         return self.evaluate(x, dim)
@@ -187,17 +194,36 @@ class PermuteOp(operator.Operator, fn_name="permute"):
 
 # TODO: account for broadcasting of arrays
 
+# TODO: check ArrayOrScalar to tensor or scalar, nothing else.
+
 
 class AddOp(operator.Operator, fn_name="add", symbol="+"):
-    def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
+        if isinstance(x1, variable.Variable) and isinstance(
+                x2, variable.Variable) and x1.shape != x2.shape:
+            common_shape, x1_reduction_dim, x2_reduction_dim = (
+                broadcast_shapes(x1, x2))
+            x1 = ExpandOp.apply(
+                x1, common_shape) if x1.shape != common_shape else x1
+            x2 = ExpandOp.apply(
+                x2, common_shape) if x2.shape != common_shape else x2
+            if x1_reduction_dim:
+                self._cache.x1_reduction_dim = x1_reduction_dim
+            if x2_reduction_dim:
+                self._cache.x2_reduction_dim = x2_reduction_dim
         return self.evaluate(x1, x2)
 
-    def backward(self, grad_out: Optional[variable.ArrayLike]):
-        return grad_out, grad_out
+    def backward(self, grad_out: Optional[variable.ArrayOrScalar]):
+        x1_grad = x2_grad = grad_out
+        if 'x1_reduction_dim' in self._cache:
+            x1_grad = SumOp.apply(grad_out, self._cache.x1_reduction_dim)
+        if 'x1_reduction_dim' in self._cache:
+            x2_grad = SumOp.apply(grad_out, self._cache.x2_reduction_dim)
+        return x1_grad, x2_grad
 
 
 class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
-    def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
         return self.evaluate(x1, x2)
@@ -210,7 +236,7 @@ class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
 
 
 class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayOrScalar):
         out = self.evaluate(x)
         self._cache.out = out
         return out
@@ -223,7 +249,7 @@ class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
 
 
 class DivOp(operator.Operator, fn_name="divide"):
-    def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         return self.evaluate(x1, x2)
@@ -262,7 +288,7 @@ class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
 
 
 class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayOrScalar):
         return self.evaluate(x)
 
     def backward(self, grad_out):
@@ -270,7 +296,7 @@ class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
 
 
 class MinusOp(operator.Operator, fn_name="subtract", symbol="-"):
-    def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         return self.evaluate(x1, x2)
 
     def backward(self, grad_out: variable.Variable):
@@ -278,7 +304,7 @@ class MinusOp(operator.Operator, fn_name="subtract", symbol="-"):
 
 
 class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayOrScalar):
         out = self.evaluate(x)
         self._cache.out = out
         return out
@@ -289,7 +315,7 @@ class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
 
 
 class LogOp(operator.Operator, fn_name="log", symbol="ln"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayOrScalar):
         self._cache.x = x
         return self.evaluate(x)
 
@@ -300,7 +326,7 @@ class LogOp(operator.Operator, fn_name="log", symbol="ln"):
 
 
 class PowOp(operator.Operator, fn_name="power", symbol="**"):
-    def forward(self, x1: variable.ArrayLike, x2: variable.ArrayLike):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         out = self.evaluate(x1, x2)
         self._cache.x1 = (
             x1 if operator.prop_grad(x1) or operator.prop_grad(x2) else None)
@@ -322,7 +348,7 @@ class PowOp(operator.Operator, fn_name="power", symbol="**"):
 
 
 class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayOrScalar):
         out = self.evaluate(x)
         self._cache.out = out
         return out
@@ -334,7 +360,7 @@ class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
 
 
 class TanhOp(operator.Operator, fn_name="tanh", symbol="tanh"):
-    def forward(self, x: variable.ArrayLike):
+    def forward(self, x: variable.ArrayOrScalar):
         out = self.evaluate(x)
         self._cache.out = out
         return out

@@ -9,23 +9,23 @@ from clove import ops
 from clove import variable
 
 
-def get_data(array: variable.ArrayLike):
+def get_data(array: variable.ArrayOrScalar):
     if isinstance(array, variable.Variable):
         return array.data
     return array
 
 
-def sigmoid(x: variable.ArrayLike):
+def sigmoid(x: variable.ArrayOrScalar):
     return np.reciprocal(1 + np.exp(-get_data(x)))
 
 
-def transpose(x: variable.ArrayLike, dim0: int, dim1: int):
+def transpose(x: variable.ArrayOrScalar, dim0: int, dim1: int):
     return np.transpose(get_data(x), axes=(dim0, dim1))
 
 
 def _resolve_unary(fn):
     @functools.wraps(fn)
-    def wrapper(x: variable.ArrayLike,
+    def wrapper(x: variable.ArrayOrScalar,
                 dim: Union[int, Sequence[int], None] = None):
         return fn(get_data(x)) if dim is None else fn(get_data(x), dim)
     return wrapper
@@ -33,8 +33,8 @@ def _resolve_unary(fn):
 
 def _resolve_binary(fn):
     @functools.wraps(fn)
-    def wrapper(x1: variable.ArrayLike,
-                x2: variable.ArrayLike):
+    def wrapper(x1: variable.ArrayOrScalar,
+                x2: variable.ArrayOrScalar):
         return fn(get_data(x1), get_data(x2))
     return wrapper
 
