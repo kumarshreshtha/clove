@@ -217,13 +217,23 @@ class AddOp(operator.Operator, fn_name="add", symbol="+"):
         x1_grad = x2_grad = grad_out
         if 'x1_reduction_dim' in self._cache:
             x1_grad = SumOp.apply(grad_out, self._cache.x1_reduction_dim)
-        if 'x1_reduction_dim' in self._cache:
+        if 'x2_reduction_dim' in self._cache:
             x2_grad = SumOp.apply(grad_out, self._cache.x2_reduction_dim)
         return x1_grad, x2_grad
 
 
 class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
+        common_shape, x1_reduction_dim, x2_reduction_dim = (
+            broadcast_shapes(x1, x2))
+        x1 = ExpandOp.apply(
+            x1, common_shape) if x1.shape != common_shape else x1
+        x2 = ExpandOp.apply(
+            x2, common_shape) if x2.shape != common_shape else x2
+        if x1_reduction_dim:
+            self._cache.x1_reduction_dim = x1_reduction_dim
+        if x2_reduction_dim:
+            self._cache.x2_reduction_dim = x2_reduction_dim
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
         return self.evaluate(x1, x2)
@@ -232,20 +242,19 @@ class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
         x1, x2 = self._cache.x1, self._cache.x2
         grad_x1 = MulOp.apply(x2, grad_out) if x2 is not None else None
         grad_x2 = MulOp.apply(x1, grad_out) if x1 is not None else None
+        if 'x1_reduction_dim' in self._cache:
+            grad_x1 = SumOp.apply(grad_x1, self._cache.x1_reduction_dim)
+        if 'x2_reduction_dim' in self._cache:
+            grad_x2 = SumOp.apply(grad_x2, self._cache.x2_reduction_dim)
         return grad_x1, grad_x2
 
 
-class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
-    def forward(self, x: variable.ArrayOrScalar):
-        out = self.evaluate(x)
-        self._cache.out = out
-        return out
+class MinusOp(operator.Operator, fn_name="subtract", symbol="-"):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
+        return self.evaluate(x1, x2)
 
     def backward(self, grad_out: variable.Variable):
-        out_sq = NegOp.apply(PowOp.apply(self._cache.out, 2))
-        return MulOp.apply(grad_out, out_sq)
-
-# TODO: maybe just use the variable ops in backward. It's cleaner.
+        return grad_out, NegOp.apply(grad_out)
 
 
 class DivOp(operator.Operator, fn_name="divide"):
@@ -287,20 +296,47 @@ class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
         return grad_x1, grad_x2
 
 
+class PowOp(operator.Operator, fn_name="power", symbol="**"):
+    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
+        out = self.evaluate(x1, x2)
+        self._cache.x1 = (
+            x1 if operator.prop_grad(x1) or operator.prop_grad(x2) else None)
+        self._cache.x2 = x2 if operator.prop_grad(x1) else None
+        self._cache.out = out if operator.prop_grad(x2) else None
+        return out
+
+    def backward(self, grad_out: variable.Variable):
+        x1, x2, out = self._cache.x1, self._cache.x2, self._cache.out
+        x1_grad = x2_grad = None
+        if x2 is not None:
+            x1_grad = (
+                MulOp.apply(
+                    MulOp.apply(x2, PowOp.apply(
+                        x1, MinusOp.apply(x2, 1))), grad_out))
+        if out is not None:
+            x2_grad = MulOp.apply(out, LogOp.apply(x1))
+        return x1_grad, x2_grad
+
+
+class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
+    def forward(self, x: variable.ArrayOrScalar):
+        out = self.evaluate(x)
+        self._cache.out = out
+        return out
+
+    def backward(self, grad_out: variable.Variable):
+        out_sq = NegOp.apply(PowOp.apply(self._cache.out, 2))
+        return MulOp.apply(grad_out, out_sq)
+
+# TODO: maybe just use the variable ops in backward. It's cleaner.
+
+
 class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
     def forward(self, x: variable.ArrayOrScalar):
         return self.evaluate(x)
 
     def backward(self, grad_out):
         return NegOp.apply(grad_out)
-
-
-class MinusOp(operator.Operator, fn_name="subtract", symbol="-"):
-    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        return self.evaluate(x1, x2)
-
-    def backward(self, grad_out: variable.Variable):
-        return grad_out, NegOp.apply(grad_out)
 
 
 class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
@@ -323,28 +359,6 @@ class LogOp(operator.Operator, fn_name="log", symbol="ln"):
         x = self._cache.x
         return (MulOp.apply(PowOp.apply(x, -1), grad_out)
                 if x is not None else None)
-
-
-class PowOp(operator.Operator, fn_name="power", symbol="**"):
-    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        out = self.evaluate(x1, x2)
-        self._cache.x1 = (
-            x1 if operator.prop_grad(x1) or operator.prop_grad(x2) else None)
-        self._cache.x2 = x2 if operator.prop_grad(x1) else None
-        self._cache.out = out if operator.prop_grad(x2) else None
-        return out
-
-    def backward(self, grad_out: variable.Variable):
-        x1, x2, out = self._cache.x1, self._cache.x2, self._cache.out
-        x1_grad = x2_grad = None
-        if x2 is not None:
-            x1_grad = (
-                MulOp.apply(
-                    MulOp.apply(x2, PowOp.apply(
-                        x1, MinusOp.apply(x2, 1))), grad_out))
-        if out is not None:
-            x2_grad = MulOp.apply(out, LogOp.apply(x1))
-        return x1_grad, x2_grad
 
 
 class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
