@@ -1,6 +1,5 @@
-import enum
 import numbers
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Optional, Union
 import warnings
 
 from clove import autodiff
@@ -78,6 +77,7 @@ class Variable:
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
 
+    # TODO: format this better.
     def __repr__(self):
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
         return f"{self.__class__.__name__}({self.data}{grad_repr})"
@@ -110,6 +110,9 @@ class Variable:
     exp = binding_utils.make_method("exp", ops.ExpOp)
     tanh = binding_utils.make_method("tanh", ops.TanhOp)
     transpose = binding_utils.make_method("transpose", ops.TransposeOp)
+    sum = binding_utils.make_method("sum", ops.SumOp)
+    prod = binding_utils.make_method("prod", ops.ProdOp)
+    mean = binding_utils.make_method("mean", ops.MeanOp)
 
     def __rsub__(self, other):
         return other + (-self)

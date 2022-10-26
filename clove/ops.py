@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 from clove import operator
-
-if TYPE_CHECKING:
-    from clove import variable
+from clove import variable
 
 
 def resolve_dims_for_reduction(dims, total_dims):
@@ -19,6 +17,10 @@ def resolve_dims_for_reduction(dims, total_dims):
 # TODO: throw an error when shapes don't match for the trailing dims.
 # TODO: how to handle non arrays?
 # should we convert to arrays implicitely?
+
+# Abstractions:
+# 1. Unary reduction over dims.
+# 2. Binary broadcasting
 
 
 def broadcast_shapes(x1, x2):
@@ -191,10 +193,6 @@ class PermuteOp(operator.Operator, fn_name="permute"):
 
     def backward(self, grad_out: variable.Variable):
         return PermuteOp.apply(grad_out, self._cache.rev_dim)
-
-# TODO: account for broadcasting of arrays
-
-# TODO: check ArrayOrScalar to tensor or scalar, nothing else.
 
 
 class AddOp(operator.Operator, fn_name="add", symbol="+"):
