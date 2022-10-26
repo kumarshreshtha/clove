@@ -107,7 +107,7 @@ class ReshapeOp(operator.Operator, fn_name="squeeze"):
 
 
 def expand_dims(shape, dims):
-    return [s if i not in dims else 1 for i, s in shape]
+    return [s if i not in dims else 1 for i, s in enumerate(shape)]
 
 
 class SumOp(operator.Operator, fn_name="sum"):
@@ -222,16 +222,18 @@ class AddOp(operator.Operator, fn_name="add", symbol="+"):
 
 class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        common_shape, x1_reduction_dim, x2_reduction_dim = (
-            broadcast_shapes(x1, x2))
-        x1 = ExpandOp.apply(
-            x1, common_shape) if x1.shape != common_shape else x1
-        x2 = ExpandOp.apply(
-            x2, common_shape) if x2.shape != common_shape else x2
-        if x1_reduction_dim:
-            self._cache.x1_reduction_dim = x1_reduction_dim
-        if x2_reduction_dim:
-            self._cache.x2_reduction_dim = x2_reduction_dim
+        if isinstance(x1, variable.Variable) and isinstance(
+                x2, variable.Variable) and x1.shape != x2.shape:
+            common_shape, x1_reduction_dim, x2_reduction_dim = (
+                broadcast_shapes(x1, x2))
+            x1 = ExpandOp.apply(
+                x1, common_shape) if x1.shape != common_shape else x1
+            x2 = ExpandOp.apply(
+                x2, common_shape) if x2.shape != common_shape else x2
+            if x1_reduction_dim:
+                self._cache.x1_reduction_dim = x1_reduction_dim
+            if x2_reduction_dim:
+                self._cache.x2_reduction_dim = x2_reduction_dim
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
         return self.evaluate(x1, x2)

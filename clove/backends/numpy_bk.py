@@ -9,6 +9,9 @@ from clove import ops
 from clove import variable
 
 
+# TODO: move data abstraction to operator function so direct function
+# associations can be created whenever possible.
+
 def get_data(array: variable.ArrayOrScalar):
     if isinstance(array, variable.Variable):
         return array.data
@@ -55,7 +58,8 @@ class Numpy(backend.Backend, name="numpy"):
             ops.SumOp: _resolve_unary(np.sum),
             ops.TanhOp: _resolve_unary(np.tanh),
             ops.TransposeOp: transpose,
-            ops.PermuteOp: _resolve_unary(np.transpose)
+            ops.PermuteOp: _resolve_unary(np.transpose),
+            ops.ReshapeOp: _resolve_unary(np.reshape)
             }
 
     @classmethod
