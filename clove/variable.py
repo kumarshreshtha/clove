@@ -106,6 +106,7 @@ class Variable:
     __neg__ = binding_utils.make_method("__neg__", ops.NegOp)
     __pow__ = binding_utils.make_method("__pow__", ops.PowOp)
     __matmul__ = binding_utils.make_method("__matmul__", ops.MatmulOp)
+    reciprocal = binding_utils.make_method("__matmul__", ops.ReciprocalOp)
     sigmoid = binding_utils.make_method("sigmoid", ops.SigmoidOp)
     exp = binding_utils.make_method("exp", ops.ExpOp)
     tanh = binding_utils.make_method("tanh", ops.TanhOp)
@@ -114,6 +115,7 @@ class Variable:
     prod = binding_utils.make_method("prod", ops.ProdOp)
     mean = binding_utils.make_method("mean", ops.MeanOp)
     reshape = binding_utils.make_method("reshape", ops.ReshapeOp)
+    expand = binding_utils.make_method("expand", ops.ExpandOp)
 
     def __rsub__(self, other):
         return other + (-self)

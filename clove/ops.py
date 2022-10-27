@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import Optional, Sequence, Tuple, Union
 
+from clove import binding_utils
 from clove import operator
 from clove import variable
 
@@ -132,6 +133,7 @@ class SumOp(ReductionOp, fn_name="sum"):
     def backward(self, grad_out):
         return super().backward(grad_out).expand(self._cache.shape)
 
+
 class MeanOp(ReductionOp, fn_name="mean"):
     def forward(self,
                 x: variable.Variable,
@@ -139,7 +141,7 @@ class MeanOp(ReductionOp, fn_name="mean"):
                 keepdim: bool = False
                 ) -> variable.Variable:
         self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
-        return super().forward(x, dim , keepdim)
+        return super().forward(x, dim, keepdim)
 
     def backward(self, grad_out):
         grad_out = super().backward(grad_out) * self._cache.div
@@ -196,90 +198,72 @@ class PermuteOp(operator.Operator, fn_name="permute"):
         return PermuteOp.apply(grad_out, self._cache.rev_dim)
 
 
-class AddOp(operator.Operator, fn_name="add", symbol="+"):
+class BinaryOp(operator.Operator):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        if isinstance(x1, variable.Variable) and isinstance(
-                x2, variable.Variable) and x1.shape != x2.shape:
+        if (isinstance(x1, variable.Variable) and
+            isinstance(x2, variable.Variable) and
+                x1.shape != x2.shape):
             common_shape, x1_reduction_dim, x2_reduction_dim = (
                 broadcast_shapes(x1, x2))
-            x1 = ExpandOp.apply(
-                x1, common_shape) if x1.shape != common_shape else x1
-            x2 = ExpandOp.apply(
-                x2, common_shape) if x2.shape != common_shape else x2
+            x1 = (ExpandOp.apply(x1, common_shape)
+                  if x1.shape != common_shape else x1)
+            x2 = (ExpandOp.apply(x2, common_shape)
+                  if x2.shape != common_shape else x2)
             if x1_reduction_dim:
                 self._cache.x1_reduction_dim = x1_reduction_dim
             if x2_reduction_dim:
                 self._cache.x2_reduction_dim = x2_reduction_dim
         return self.evaluate(x1, x2)
 
-    def backward(self, grad_out: Optional[variable.ArrayOrScalar]):
-        x1_grad = x2_grad = grad_out
-        if 'x1_reduction_dim' in self._cache:
-            x1_grad = SumOp.apply(grad_out, self._cache.x1_reduction_dim)
-        if 'x2_reduction_dim' in self._cache:
-            x2_grad = SumOp.apply(grad_out, self._cache.x2_reduction_dim)
+    def reduce_grad(self, x1_grad, x2_grad):
+        if 'x1_reduction_dim' in self._cache and x1_grad is not None:
+            x1_grad = SumOp.apply(x1_grad, self._cache.x1_reduction_dim)
+        if 'x2_reduction_dim' in self._cache and x2_grad is not None:
+            x2_grad = SumOp.apply(x2_grad, self._cache.x2_reduction_dim)
         return x1_grad, x2_grad
+
+
+class AddOp(BinaryOp, fn_name="add", symbol="+"):
+    def backward(self, grad_out: Optional[variable.ArrayOrScalar]):
+        return self.reduce_grad(grad_out, grad_out)
 
 
 class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        if isinstance(x1, variable.Variable) and isinstance(
-                x2, variable.Variable) and x1.shape != x2.shape:
-            common_shape, x1_reduction_dim, x2_reduction_dim = (
-                broadcast_shapes(x1, x2))
-            x1 = ExpandOp.apply(
-                x1, common_shape) if x1.shape != common_shape else x1
-            x2 = ExpandOp.apply(
-                x2, common_shape) if x2.shape != common_shape else x2
-            if x1_reduction_dim:
-                self._cache.x1_reduction_dim = x1_reduction_dim
-            if x2_reduction_dim:
-                self._cache.x2_reduction_dim = x2_reduction_dim
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
-        return self.evaluate(x1, x2)
+        return super().forward(x1, x2)
 
     def backward(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
-        grad_x1 = MulOp.apply(x2, grad_out) if x2 is not None else None
-        grad_x2 = MulOp.apply(x1, grad_out) if x1 is not None else None
-        if 'x1_reduction_dim' in self._cache:
-            grad_x1 = SumOp.apply(grad_x1, self._cache.x1_reduction_dim)
-        if 'x2_reduction_dim' in self._cache:
-            grad_x2 = SumOp.apply(grad_x2, self._cache.x2_reduction_dim)
-        return grad_x1, grad_x2
+        x1_grad = MulOp.apply(x2, grad_out) if x2 is not None else None
+        x2_grad = MulOp.apply(x1, grad_out) if x1 is not None else None
+        return self.reduce_grad(x1_grad, x2_grad)
 
 
-class MinusOp(operator.Operator, fn_name="subtract", symbol="-"):
-    def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        return self.evaluate(x1, x2)
-
+class MinusOp(BinaryOp, fn_name="subtract", symbol="-"):
     def backward(self, grad_out: variable.Variable):
-        return grad_out, NegOp.apply(grad_out)
+        return self.reduce_grad(grad_out, -grad_out)
 
 
-class DivOp(operator.Operator, fn_name="divide"):
+class DivOp(BinaryOp, fn_name="divide"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
-        self._cache.x2 = x2 if operator.prop_grad(x1) else None
-        return self.evaluate(x1, x2)
+        self._cache.x2 = (x2 if operator.prop_grad(x1) or
+                          operator.prop_grad(x2)
+                          else None)
+        return super().forward(x2, x2)
 
     def backward(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
         grad_x1 = grad_x2 = None
         if x2 is not None:
-            grad_x1 = MulOp.apply(ReciprocalOp.apply(x2), grad_out)
+            grad_x1 = grad_out * x2.reciprocal()
         if x1 is not None:
-            grad_x2 = (
-                MulOp.apply(
-                    MulOp.apply(
-                        NegOp.apply(PowOp.apply(ReciprocalOp.apply(x2), 2)),
-                        x1
-                    ),
-                    grad_out
-                )
-            )
-        return grad_x1, grad_x2
+            grad_x2 = grad_out * x1 * x2.reciprocal()**2
+        return self.reduce_grad(grad_x1, grad_x2)
+
+# TODO: do the following 2 ops qualify as binary ops?
 
 
 class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
