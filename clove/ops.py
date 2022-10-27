@@ -17,6 +17,7 @@ def resolve_dims_for_reduction(dims, total_dims):
 # TODO: throw an error when shapes don't match for the trailing dims.
 # TODO: how to handle non arrays?
 # should we convert to arrays implicitely?
+# TODO: move op functional bindings to this file?
 
 # Abstractions:
 # 1. Unary reduction over dims.
@@ -67,9 +68,7 @@ class ExpandOp(operator.Operator, fn_name="expand"):
         return self.evaluate(x, shape)
 
     def backward(self, grad_out):
-        if not self._cache.reduction_dim:
-            return grad_out
-        return SumOp.apply(grad_out, dim=self._cache.reduction_dim)
+        return grad_out.sum(dim=self._cache.reduction_dim)
 
 # TODO: add support for keep_dims.
 # TODO: keep track of dim to know what dimension to expand in.
@@ -103,7 +102,7 @@ class ReshapeOp(operator.Operator, fn_name="squeeze"):
         return self.evaluate(x, shape)
 
     def backward(self, grad_output: variable.Variable):
-        return ReshapeOp.apply(grad_output, self._cache.shape)
+        return grad_output.reshape(self._cache.shape)
 
 
 def expand_dims(shape, dims):
@@ -114,55 +113,67 @@ class SumOp(operator.Operator, fn_name="sum"):
 
     def forward(self,
                 x: variable.Variable,
-                dim: Union[int, Tuple[int, ...], None] = None
+                dim: Union[int, Tuple[int, ...], None] = None,
+                keepdim: bool = False
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
         self._cache.dim = dim
         self._cache.shape = x.shape
-        return self.evaluate(x, dim)
+        self._cache.keepdim = keepdim
+        return self.evaluate(x, dim, keepdim)
 
     def backward(self, grad_out):
-        expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
-        return ExpandOp.apply(
-            ReshapeOp.apply(grad_out, expanded_shape), self._cache.shape)
+        if not self._cache.keepdim:
+            expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
+            grad_out = grad_out.reshape(expanded_shape)
+        return grad_out.expand(self._cache.shape)
 
 
 class MeanOp(operator.Operator, fn_name="mean"):
     def forward(self,
                 x: variable.Variable,
-                dim: Union[int, Tuple[int, ...], None] = None
+                dim: Union[int, Tuple[int, ...], None] = None,
+                keepdim: bool = False
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
         self._cache.shape = x.shape
         self._cache.dim = dim
         self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
-        return self.evaluate(x, dim)
+        self._cache.keepdim = keepdim
+        return self.evaluate(x, dim, keepdim)
 
     def backward(self, grad_out):
-        expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
-        grad_out = ExpandOp.apply(ReshapeOp.apply(grad_out, expanded_shape),
-                                  self._cache.shape)
-        return MulOp.apply(grad_out, self._cache.div)
+        if not self._cache.keepdim:
+            expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
+            grad_out = grad_out.reshape(expanded_shape)
+        grad_out = grad_out * self._cache.div
+        return grad_out.expand(self._cache.shape)
 
 
 class ProdOp(operator.Operator, fn_name="prod"):
     def forward(self,
                 x: variable.Variable,
-                dim: Union[int, Tuple[int, ...], None] = None
+                dim: Union[int, Tuple[int, ...], None] = None,
+                keepdim: bool = False
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
-        out = self.evaluate(x, dim)
+        out = self.evaluate(x, dim, keepdim)
         self._cache.x = x
         self._cache.out = out
         self._cache.dim = dim
+        self._cache.keepdim = dim
         return out
 
-    def backward(self, grad_output):
+    def backward(self, grad_out):
         out = self._cache.out
         x = self._cache.x
-        expanded_shape = expand_dims(x.shape, self._cache.dim)
-        grad = DivOp.apply(ReshapeOp.apply(out, expanded_shape), x)
-        return MulOp.apply(grad, grad_output)
+        if not self._cache.keepdim:
+            expanded_shape = expand_dims(x.shape, self._cache.dim)
+            grad_out = grad_out.reshape(expanded_shape)
+            out = out.reshape(expanded_shape)
+        # the broadcast is implicitely done in the div and mul.
+        grad = out / x
+        return grad_out * grad
 
 
 class CloneOp(operator.Operator, fn_name="clone"):

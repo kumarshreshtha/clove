@@ -113,6 +113,7 @@ class Variable:
     sum = binding_utils.make_method("sum", ops.SumOp)
     prod = binding_utils.make_method("prod", ops.ProdOp)
     mean = binding_utils.make_method("mean", ops.MeanOp)
+    reshape = binding_utils.make_method("reshape", ops.ReshapeOp)
 
     def __rsub__(self, other):
         return other + (-self)
