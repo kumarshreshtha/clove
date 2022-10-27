@@ -109,8 +109,7 @@ def expand_dims(shape, dims):
     return [s if i not in dims else 1 for i, s in enumerate(shape)]
 
 
-class SumOp(operator.Operator, fn_name="sum"):
-
+class ReductionOp(operator.Operator):
     def forward(self,
                 x: variable.Variable,
                 dim: Union[int, Tuple[int, ...], None] = None,
@@ -118,60 +117,51 @@ class SumOp(operator.Operator, fn_name="sum"):
                 ) -> variable.Variable:
         dim = resolve_dims_for_reduction(dim, len(x.shape))
         self._cache.dim = dim
-        self._cache.shape = x.shape
         self._cache.keepdim = keepdim
+        self._cache.shape = x.shape
         return self.evaluate(x, dim, keepdim)
 
     def backward(self, grad_out):
         if not self._cache.keepdim:
             expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
             grad_out = grad_out.reshape(expanded_shape)
-        return grad_out.expand(self._cache.shape)
+        return grad_out
 
 
-class MeanOp(operator.Operator, fn_name="mean"):
+class SumOp(ReductionOp, fn_name="sum"):
+    def backward(self, grad_out):
+        return super().backward(grad_out).expand(self._cache.shape)
+
+class MeanOp(ReductionOp, fn_name="mean"):
     def forward(self,
                 x: variable.Variable,
                 dim: Union[int, Tuple[int, ...], None] = None,
                 keepdim: bool = False
                 ) -> variable.Variable:
-        dim = resolve_dims_for_reduction(dim, len(x.shape))
-        self._cache.shape = x.shape
-        self._cache.dim = dim
         self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
-        self._cache.keepdim = keepdim
-        return self.evaluate(x, dim, keepdim)
+        return super().forward(x, dim , keepdim)
 
     def backward(self, grad_out):
-        if not self._cache.keepdim:
-            expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
-            grad_out = grad_out.reshape(expanded_shape)
-        grad_out = grad_out * self._cache.div
+        grad_out = super().backward(grad_out) * self._cache.div
         return grad_out.expand(self._cache.shape)
 
 
-class ProdOp(operator.Operator, fn_name="prod"):
+class ProdOp(ReductionOp, fn_name="prod"):
     def forward(self,
                 x: variable.Variable,
                 dim: Union[int, Tuple[int, ...], None] = None,
                 keepdim: bool = False
                 ) -> variable.Variable:
-        dim = resolve_dims_for_reduction(dim, len(x.shape))
-        out = self.evaluate(x, dim, keepdim)
         self._cache.x = x
-        self._cache.out = out
-        self._cache.dim = dim
-        self._cache.keepdim = dim
-        return out
+        return super().forward(x, dim, keepdim)
 
     def backward(self, grad_out):
+        grad_out = super().backward(grad_out)
         out = self._cache.out
         x = self._cache.x
         if not self._cache.keepdim:
             expanded_shape = expand_dims(x.shape, self._cache.dim)
-            grad_out = grad_out.reshape(expanded_shape)
             out = out.reshape(expanded_shape)
-        # the broadcast is implicitely done in the div and mul.
         grad = out / x
         return grad_out * grad
 
