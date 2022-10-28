@@ -45,19 +45,25 @@ def resolve_shape_for_expansion(new_shape, old_shape):
     if any([d == -1 for d in new_shape[:leading_dims]]):
         raise RuntimeError("expanded size of the tensor (-1) isn't allowed in"
                            " a leading, non-existing dimension")
-    return (new_shape[:leading_dims] +
-            tuple([old_shape[i] if d == -1 else d
-                   for i, d in enumerate(new_shape[leading_dims:])]))
-
-# TODO: account for 1 in shape dims.
+    old_shape = [1] * leading_dims + old_shape
+    dims = []
+    reduction_dims = []
+    for i, (n_s, o_s) in enumerate(zip(old_shape, new_shape)):
+        if n_s != o_s and (o_s != 1 or n_s != -1):
+            raise RuntimeError(
+                f"cannot expand dimension {i} of size {o_s} to size {n_s}")
+        if o_s == 1 and n_s != 1:
+            reduction_dims.append(i)
+        dims.append(o_s if n_s == -1 else n_s)
+    return dims, reduction_dims
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
     def forward(self,
                 x: variable.Variable,
                 shape: Union[int, Tuple[int, ...]]):
-        shape = resolve_shape_for_expansion(shape, x.shape)
-        self._cache.reduction_dim = tuple(range(0, len(shape) - len(x.shape)))
+        shape, self._cache.reduction_dims = (
+            resolve_shape_for_expansion(shape, x.shape))
         return self.evaluate(x, shape)
 
     def backward(self, grad_out):
