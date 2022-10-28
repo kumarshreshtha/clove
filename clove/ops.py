@@ -6,15 +6,20 @@ from typing import Optional, Sequence, Tuple, Union
 from clove import operator
 from clove import variable
 
-# TODO: throw an error when shapes don't match for the trailing dims.
-
 
 def resolve_dims_for_reduction(dims, total_dims):
     if isinstance(dims, int):
         return resolve_dims_for_reduction((dims, ), total_dims)
     if dims is None:
         return tuple(range(total_dims))
-    return tuple(total_dims + d if d < 0 else d for d in dims)
+    final_dims = []
+    for d in dims:
+        dim = total_dims + d if d < 0 else d
+        if dim >= total_dims:
+            raise IndexError(
+                f"dim {d} out of range for tensor with {total_dims} dims")
+        final_dims.append(dim)
+    return tuple(final_dims)
 
 
 def broadcast_shapes(x1, x2):
@@ -256,25 +261,10 @@ class DivOp(BinaryOp, fn_name="divide"):
             grad_x2 = grad_out * x1 * x2.reciprocal()**2
         return self.reduce_grad(grad_x1, grad_x2)
 
-# TODO: do the following 2 ops qualify as binary ops?
 
-
-class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
-    def forward(self, x1: variable.Variable, x2: variable.Variable):
-        self._cache.x2 = x2 if operator.prop_grad(x1) else None
-        self._cache.x1 = x1 if operator.prop_grad(x2) else None
-        return self.evaluate(x1, x2)
-
-    def backward(self, grad_out: variable.Variable):
-        x1, x2 = self._cache.x1, self._cache.x2
-        grad_x1 = grad_out @ x2.T if x2 is not None else None
-        grad_x2 = x1.T @ grad_out if x1 is not None else None
-        return grad_x1, grad_x2
-
-
-class PowOp(operator.Operator, fn_name="power", symbol="**"):
+class PowOp(BinaryOp, fn_name="power", symbol="**"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
-        out = self.evaluate(x1, x2)
+        out = super().forward(x1, x2)
         self._cache.x1 = (
             x1 if operator.prop_grad(x1) or operator.prop_grad(x2) else None)
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
@@ -288,7 +278,20 @@ class PowOp(operator.Operator, fn_name="power", symbol="**"):
             x1_grad = grad_out * x2 * x1 ** (x2 - 1)
         if out is not None:
             x2_grad = grad_out * x1.log()
-        return x1_grad, x2_grad
+        return self.reduce_grad(x1_grad, x2_grad)
+
+
+class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
+    def forward(self, x1: variable.Variable, x2: variable.Variable):
+        self._cache.x2 = x2 if operator.prop_grad(x1) else None
+        self._cache.x1 = x1 if operator.prop_grad(x2) else None
+        return self.evaluate(x1, x2)
+
+    def backward(self, grad_out: variable.Variable):
+        x1, x2 = self._cache.x1, self._cache.x2
+        grad_x1 = grad_out @ x2.T if x2 is not None else None
+        grad_x2 = x1.T @ grad_out if x1 is not None else None
+        return grad_x1, grad_x2
 
 
 class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
