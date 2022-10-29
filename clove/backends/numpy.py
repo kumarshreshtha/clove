@@ -1,7 +1,9 @@
 import numpy as _np
 from clove import binding_utils as _binding_utils
 from clove.backends import numpy_bk as _npbk
+from clove import ops as _ops
 
+# creation routines
 empty = _binding_utils.wrap_creation_op(_np.empty, _npbk.Numpy)
 empty_like = _binding_utils.wrap_creation_op(_np.empty_like, _npbk.Numpy)
 eye = _binding_utils.wrap_creation_op(_np.eye, _npbk.Numpy)
@@ -32,3 +34,20 @@ tri = _binding_utils.wrap_creation_op(_np.tri, _npbk.Numpy)
 tril = _binding_utils.wrap_creation_op(_np.tril, _npbk.Numpy)
 triu = _binding_utils.wrap_creation_op(_np.triu, _npbk.Numpy)
 vander = _binding_utils.wrap_creation_op(_np.vander, _npbk.Numpy)
+
+# operators
+clone = _binding_utils.make_bound_backend_fn(_ops.CloneOp, _npbk.Numpy)
+transpose = _binding_utils.make_bound_backend_fn(_ops.TransposeOp, _npbk.Numpy)
+permute = _binding_utils.make_bound_backend_fn(_ops.PermuteOp, _npbk.Numpy)
+add = _binding_utils.make_bound_backend_fn(_ops.AddOp, _npbk.Numpy)
+multiply = _binding_utils.make_bound_backend_fn(_ops.MulOp, _npbk.Numpy)
+matmul = _binding_utils.make_bound_backend_fn(_ops.MatmulOp, _npbk.Numpy)
+negative = _binding_utils.make_bound_backend_fn(_ops.NegOp, _npbk.Numpy)
+subtract = _binding_utils.make_bound_backend_fn(_ops.MinusOp, _npbk.Numpy)
+sum = _binding_utils.make_bound_backend_fn(_ops.SumOp, _npbk.Numpy)
+exp = _binding_utils.make_bound_backend_fn(_ops.ExpOp, _npbk.Numpy)
+log = _binding_utils.make_bound_backend_fn(_ops.LogOp, _npbk.Numpy)
+power = _binding_utils.make_bound_backend_fn(_ops.PowOp, _npbk.Numpy)
+sigmoid = _binding_utils.make_bound_backend_fn(_ops.SigmoidOp, _npbk.Numpy)
+tanh = _binding_utils.make_bound_backend_fn(_ops.TanhOp, _npbk.Numpy)
+expand = _binding_utils.make_bound_backend_fn(_ops.ExpandOp, _npbk.Numpy)

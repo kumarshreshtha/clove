@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import functools
 import inspect
+import itertools
 import pathlib
 import textwrap
 import types
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
+from clove import backend
 from clove import operator
 from clove import variable
-
-if TYPE_CHECKING:
-    from clove import backend
 
 
 def get_op_signature(cls: operator.Operator):
@@ -42,6 +41,23 @@ def make_fn(op: operator.Operator):
     new_fn.__signature__ = get_op_signature(op)
     new_fn._op = op
     return new_fn
+
+
+def make_bound_backend_fn(op, bk):
+    new_fn = make_fn(op)
+
+    @functools.wraps(new_fn)
+    def wrapper(*args, **kwargs):
+        if any(arg.backend != bk for arg in itertools.chain(
+                args, kwargs.values()) if isinstance(arg, variable.Variable)):
+            raise RuntimeError(f"All inputs to function `{new_fn.__name__}`"
+                               f" must be on backend {bk}")
+        curr_backend = backend.get_backend()
+        backend.set_backend(bk.name)
+        out = new_fn(*args, **kwargs)
+        backend.set_backend(curr_backend.name)
+        return out
+    return wrapper
 
 
 def make_method(name, op: operator.Operator):

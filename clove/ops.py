@@ -50,11 +50,11 @@ def resolve_shape_for_expansion(new_shape, old_shape):
     if any([d == -1 for d in new_shape[:leading_dims]]):
         raise RuntimeError("expanded size of the tensor (-1) isn't allowed in"
                            " a leading, non-existing dimension")
-    old_shape = [1] * leading_dims + old_shape
+    old_shape = [1] * leading_dims + list(old_shape)
     dims = []
     reduction_dims = []
-    for i, (n_s, o_s) in enumerate(zip(old_shape, new_shape)):
-        if n_s != o_s and (o_s != 1 or n_s != -1):
+    for i, (n_s, o_s) in enumerate(zip(new_shape, old_shape)):
+        if n_s != o_s and o_s != 1 and n_s != -1:
             raise RuntimeError(
                 f"cannot expand dimension {i} of size {o_s} to size {n_s}")
         if o_s == 1 and n_s != 1:
@@ -196,6 +196,8 @@ class PermuteOp(operator.Operator, fn_name="permute"):
 
     def backward(self, grad_out: variable.Variable):
         return grad_out.permute(self._cache.rev_dim)
+
+# TODO: check why order of variables is reversed.
 
 
 class BinaryOp(operator.Operator):
