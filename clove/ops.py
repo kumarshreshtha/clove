@@ -197,8 +197,6 @@ class PermuteOp(operator.Operator, fn_name="permute"):
     def backward(self, grad_out: variable.Variable):
         return grad_out.permute(self._cache.rev_dim)
 
-# TODO: check why order of variables is reversed.
-
 
 class BinaryOp(operator.Operator):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
