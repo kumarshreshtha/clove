@@ -7,5 +7,5 @@ from .backends import cupy, numpy
 from .grad_mode import set_grad_enabled, is_grad_enabled, no_grad
 
 # TODO: add a check to ensure the backend implements all ops
-
+# TODO: need to unify backend design.
 set_backend('numpy')  # default to numpy

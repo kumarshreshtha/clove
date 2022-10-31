@@ -10,8 +10,6 @@ from clove import backend as backend_lib
 if TYPE_CHECKING:
     from clove import operator
 
-# TODO: support variable subscription
-
 
 class Variable:
     """Container class for a variable and it's gradient."""
@@ -76,6 +74,15 @@ class Variable:
 
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, value):
+        if not self.is_leaf() or self.requires_grad:
+            raise RuntimeError("cannot mutate variable attached to a graph"
+                               " in place.")
+        self.data[key] = value
 
     # TODO: format this better.
     def __repr__(self):
