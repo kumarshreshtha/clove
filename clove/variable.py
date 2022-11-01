@@ -10,6 +10,12 @@ from clove import backend as backend_lib
 if TYPE_CHECKING:
     from clove import operator
 
+# TODO: handle subarrays as part of the graph.
+# does just wrapping them in another Variable on getitem work?
+# the 2 variables will share the same underlying storage for data.
+# so maybe it works?
+# won't work, need to track slicing as an op.
+
 
 class Variable:
     """Container class for a variable and it's gradient."""

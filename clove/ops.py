@@ -5,6 +5,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 from clove import operator
 from clove import variable
+from clove import _creation_routines
 
 
 def resolve_dims_for_reduction(dims, total_dims):
@@ -61,6 +62,19 @@ def resolve_shape_for_expansion(new_shape, old_shape):
             reduction_dims.append(i)
         dims.append(o_s if n_s == -1 else n_s)
     return dims, reduction_dims
+
+
+class IndexOp(operator.Operator, fn_name="index"):
+    def forward(self, x: variable.Variable, key):
+        self._cache.key = key
+        self._cache.shape = x.shape
+        return self.evaluate(x, key)
+
+    def backward(self, grad_out: variable.Variable):
+        # create a zeros array of shape self._cache.shape
+        # and use key to assign grad_out values inside the zeros.
+        _creation_routines.zeros(*self._cache.shape)
+        return grad_out
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
