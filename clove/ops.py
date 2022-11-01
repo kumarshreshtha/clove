@@ -6,6 +6,7 @@ from typing import Optional, Sequence, Tuple, Union
 from clove import operator
 from clove import variable
 from clove import _creation_routines
+from clove import grad_mode
 
 
 def resolve_dims_for_reduction(dims, total_dims):
@@ -71,10 +72,10 @@ class IndexOp(operator.Operator, fn_name="index"):
         return self.evaluate(x, key)
 
     def backward(self, grad_out: variable.Variable):
-        # create a zeros array of shape self._cache.shape
-        # and use key to assign grad_out values inside the zeros.
-        _creation_routines.zeros(*self._cache.shape)
-        return grad_out
+        # TODO: verify this is a valid backward op.
+        grad = _creation_routines.zeros(*self._cache.shape)
+        grad[self._cache.key] = 1
+        return grad_out * grad
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
