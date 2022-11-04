@@ -67,16 +67,16 @@ def resolve_shape_for_expansion(new_shape, old_shape):
 # TODO: fix index op
 
 
-# class IndexOp(operator.Operator, fn_name="index"):
-#     def forward(self, x: variable.Variable, key):
-#         self._cache.key = key
-#         self._cache.shape = x.shape
-#         return self.evaluate(x, key)
+class IndexOp(operator.Operator, fn_name="index"):
+    def forward(self, x: variable.Variable, key):
+        self._cache.key = key
+        self._cache.shape = x.shape
+        return self.evaluate(x, key)
 
-#     def backward(self, grad_out: variable.Variable):
-#         grad = _creation_routines.zeros(*self._cache.shape)
-#         grad[self._cache.key] = 1
-#         return grad_out * grad
+    def backward(self, grad_out: variable.Variable):
+        grad = _creation_routines.zeros(*self._cache.shape)
+        grad[self._cache.key] = grad_out
+        return grad
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
