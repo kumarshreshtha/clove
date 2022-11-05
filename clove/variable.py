@@ -75,10 +75,6 @@ class Variable:
     def zero_grad(self, set_to_none: bool = False):
         self._grad = None if set_to_none else 0.
 
-    # TODO: this needs to be wrapped in a differentiable OP.
-    def __getitem__(self, key):
-        return self.data[key]
-
     def __setitem__(self, key, value):
         if not self.is_leaf() or self.requires_grad:
             raise RuntimeError("cannot mutate variable attached to a graph"
@@ -106,10 +102,12 @@ class Variable:
     def is_scalar(self):
         return self.shape == tuple() or self.shape == (1,)
 
+    __getitem__ = binding_utils.make_method("__getitem", ops.IndexOp)
     __add__ = binding_utils.make_method("__add__", ops.AddOp)
     __radd__ = binding_utils.make_method("__radd__", ops.AddOp)
     __mul__ = binding_utils.make_method("__mul__", ops.MulOp)
     __rmul__ = binding_utils.make_method("__rmul__", ops.MulOp)
+    __truediv__ = binding_utils.make_method("__div__", ops.DivOp)
     __sub__ = binding_utils.make_method("__sub__", ops.MinusOp)
     __neg__ = binding_utils.make_method("__neg__", ops.NegOp)
     __pow__ = binding_utils.make_method("__pow__", ops.PowOp)
@@ -129,6 +127,9 @@ class Variable:
 
     def __rsub__(self, other):
         return other + (-self)
+
+    def __rtruediv__(self, other):
+        return ops.DivOp.apply(other, self)
 
     @property
     def T(self):

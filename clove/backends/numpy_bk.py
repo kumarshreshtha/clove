@@ -12,6 +12,9 @@ from clove import variable
 # TODO: move data abstraction to operator function so direct function
 # associations can be created whenever possible.
 
+# TODO: need to refactor resolution into groups, manipulation routines,
+# index routines, unary on dim, unary, binary etc.
+
 def get_data(array: variable.ArrayOrScalar):
     if isinstance(array, variable.Variable):
         return array.data
@@ -24,6 +27,19 @@ def sigmoid(x: variable.ArrayOrScalar):
 
 def transpose(x: variable.ArrayOrScalar, dim0: int, dim1: int):
     return np.transpose(get_data(x), axes=(dim0, dim1))
+
+
+def index(x: variable.Variable, key):
+    return x.data[key]
+
+
+def _resolve_unary_on_dim(fn):
+    @functools.wraps(fn)
+    def wrapper(x: variable.ArrayOrScalar,
+                dim: Union[int, Sequence[int], None] = None,
+                keepdim: bool = False):
+        return fn(get_data(x), dim, keepdims=keepdim)
+    return wrapper
 
 
 def _resolve_unary(fn):
@@ -51,15 +67,18 @@ class Numpy(backend.Backend, name="numpy"):
             ops.MatmulOp: _resolve_binary(np.matmul),
             ops.MeanOp: _resolve_unary(np.mean),
             ops.MulOp: _resolve_binary(np.multiply),
+            ops.DivOp: _resolve_binary(np.divide),
             ops.NegOp: _resolve_unary(np.negative),
             ops.PowOp: _resolve_binary(np.power),
             ops.SigmoidOp: sigmoid,
             ops.MinusOp: _resolve_binary(np.subtract),
-            ops.SumOp: _resolve_unary(np.sum),
+            ops.SumOp: _resolve_unary_on_dim(np.sum),
             ops.TanhOp: _resolve_unary(np.tanh),
             ops.TransposeOp: transpose,
             ops.PermuteOp: _resolve_unary(np.transpose),
-            ops.ReshapeOp: _resolve_unary(np.reshape)
+            ops.ReshapeOp: _resolve_unary(np.reshape),
+            ops.IndexOp: index,
+            ops.ProdOp: _resolve_unary_on_dim(np.prod),
             }
 
     @classmethod

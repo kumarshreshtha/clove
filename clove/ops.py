@@ -6,7 +6,6 @@ from typing import Optional, Sequence, Tuple, Union
 from clove import operator
 from clove import variable
 from clove import _creation_routines
-from clove import grad_mode
 
 
 def resolve_dims_for_reduction(dims, total_dims):
@@ -64,8 +63,6 @@ def resolve_shape_for_expansion(new_shape, old_shape):
         dims.append(o_s if n_s == -1 else n_s)
     return dims, reduction_dims
 
-# TODO: fix index op
-
 
 class IndexOp(operator.Operator, fn_name="index"):
     def forward(self, x: variable.Variable, key):
@@ -74,9 +71,19 @@ class IndexOp(operator.Operator, fn_name="index"):
         return self.evaluate(x, key)
 
     def backward(self, grad_out: variable.Variable):
-        grad = _creation_routines.zeros(*self._cache.shape)
-        grad[self._cache.key] = grad_out
-        return grad
+        return _IndexBackwardOp.apply(grad_out,
+                                      self._cache.shape,
+                                      self._cache.key)
+
+
+class _IndexBackwardOp(operator.Operator):
+    def forward(self, x: variable.Variable, shape, key):
+        out = _creation_routines.zeros(*shape)
+        out[key] = x
+        return out
+
+    def backward(self, grad_out: variable.Variable):
+        return IndexOp.apply(grad_out, self._cache.key)
 
 
 class ExpandOp(operator.Operator, fn_name="expand"):
@@ -171,7 +178,9 @@ class ProdOp(ReductionOp, fn_name="prod"):
                 keepdim: bool = False
                 ) -> variable.Variable:
         self._cache.x = x
-        return super().forward(x, dim, keepdim)
+        out = super().forward(x, dim, keepdim)
+        self._cache.out = out
+        return out
 
     def backward(self, grad_out):
         grad_out = super().backward(grad_out)
