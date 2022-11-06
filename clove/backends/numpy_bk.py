@@ -58,6 +58,12 @@ def _resolve_binary(fn):
     return wrapper
 
 
+def _create_from_shape(fn):
+    @functools.wraps(fn)
+    def wrapper(*shape):
+        return fn(shape)
+
+
 class Numpy(backend.Backend, name="numpy"):
     _OPS = {ops.CloneOp: _resolve_unary(np.copy),
             ops.AddOp: _resolve_binary(np.add),
@@ -81,9 +87,22 @@ class Numpy(backend.Backend, name="numpy"):
             ops.ProdOp: _resolve_unary_on_dim(np.prod),
             }
 
+    _creation_routines = {
+        'empty': _create_from_shape(np.empty),
+        'ones': _create_from_shape(np.ones),
+        'array': np.array,
+        'rand': np.random.rand,
+        'randn': np.random.randn,
+        'randint': np.random.randint
+    }
+
     @classmethod
     def resolve(cls, op, *args, **kwargs):
         return cls._OPS[op](*args, **kwargs)
+
+    @classmethod
+    def resolve_creation_routine(cls, fn_name):
+        return cls._creation_routines[fn_name]
 
     @classmethod
     def resolve_shape(cls, data):

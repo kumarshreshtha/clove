@@ -75,6 +75,8 @@ class IndexOp(operator.Operator, fn_name="index"):
                                       self._cache.shape,
                                       self._cache.key)
 
+# TODO: need to implement creation routines for this to work.
+
 
 class _IndexBackwardOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
@@ -251,7 +253,7 @@ class AddOp(BinaryOp, fn_name="add", symbol="+"):
         return self.reduce_grad(grad_out, grad_out)
 
 
-class MulOp(operator.Operator, fn_name="multiply", symbol="<&times;>"):
+class MulOp(BinaryOp, fn_name="multiply", symbol="<&times;>"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None

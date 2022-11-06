@@ -72,7 +72,7 @@ def full_like(input, requires_grad=False, name=None):
 
 
 @_creation_routine
-def array(*input, requires_grad=False, name=None):
+def array(input, requires_grad=False, name=None):
     ...
 
 
@@ -97,7 +97,7 @@ def rand_like(input, requires_grad=False, name=None):
 
 
 @_creation_routine
-def randint(*shape, requires_grad=False, name=None):
+def randint(low, high, size, requires_grad=False, name=None):
     ...
 
 
