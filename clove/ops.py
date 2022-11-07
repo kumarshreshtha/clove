@@ -81,7 +81,7 @@ class IndexOp(operator.Operator, fn_name="index"):
 class _IndexBackwardOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
         out = _creation_routines.zeros(*shape)
-        out[key] = x
+        out[key] = x.data
         return out
 
     def backward(self, grad_out: variable.Variable):

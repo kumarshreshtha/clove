@@ -62,6 +62,7 @@ def _create_from_shape(fn):
     @functools.wraps(fn)
     def wrapper(*shape):
         return fn(shape)
+    return wrapper
 
 
 class Numpy(backend.Backend, name="numpy"):
@@ -90,9 +91,10 @@ class Numpy(backend.Backend, name="numpy"):
     _creation_routines = {
         'empty': _create_from_shape(np.empty),
         'ones': _create_from_shape(np.ones),
+        'zeros': _create_from_shape(np.zeros),
         'array': np.array,
-        'rand': np.random.rand,
-        'randn': np.random.randn,
+        'rand': _create_from_shape(np.random.rand),
+        'randn': _create_from_shape(np.random.randn),
         'randint': np.random.randint
     }
 
