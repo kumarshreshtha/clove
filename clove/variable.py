@@ -1,4 +1,5 @@
 import numbers
+import textwrap
 from typing import TYPE_CHECKING, Optional, Union
 import warnings
 
@@ -81,10 +82,13 @@ class Variable:
                                " in place.")
         self.data[key] = value
 
-    # TODO: format this better.
     def __repr__(self):
         grad_repr = f", requires_grad=True" if self.requires_grad else ""
-        return f"{self.__class__.__name__}({self.data}{grad_repr})"
+        cls_name = self.__class__.__name__
+        indentation = len(cls_name)
+        return textwrap.indent(f"{cls_name}({self.data}{grad_repr})",
+                               " " * indentation,
+                               lambda line: cls_name not in line)
 
     # TODO: add resolve device.
     @property
