@@ -1,6 +1,7 @@
 from __future__ import annotations
-import dataclasses
 
+import dataclasses
+import itertools
 from typing import Optional, Sequence
 import weakref
 
@@ -125,10 +126,13 @@ class Operator:
     def clear_cache(self):
         self._cache.clear()
 
-    # TODO: send tha .data to the backend instead.
     def evaluate(self, *args, **kwargs):
         return variable.Variable(
-            self.backend.resolve(self.__class__, *args, **kwargs),
+            self.backend.resolve(self.__class__)(
+                *[arg.data if isinstance(arg, variable.Variable) else arg
+                  for arg in args],
+                **{k: v.data if isinstance(v, variable.Variable) else v
+                   for k, v in kwargs.items()}),
             self.backend)
 
 

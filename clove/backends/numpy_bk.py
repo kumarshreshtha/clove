@@ -15,18 +15,12 @@ from clove import variable
 # TODO: need to refactor resolution into groups, manipulation routines,
 # index routines, unary on dim, unary, binary etc.
 
-def get_data(array: variable.ArrayOrScalar):
-    if isinstance(array, variable.Variable):
-        return array.data
-    return array
+def sigmoid(x: np.ndarray):
+    return np.reciprocal(1 + np.exp(-x))
 
 
-def sigmoid(x: variable.ArrayOrScalar):
-    return np.reciprocal(1 + np.exp(-get_data(x)))
-
-
-def transpose(x: variable.ArrayOrScalar, dim0: int, dim1: int):
-    return np.transpose(get_data(x), axes=(dim0, dim1))
+def transpose(x: np.ndarray, dim0: int, dim1: int):
+    return np.transpose(x, axes=(dim0, dim1))
 
 
 def index(x: variable.Variable, key):
@@ -35,26 +29,26 @@ def index(x: variable.Variable, key):
 
 def _resolve_unary_on_dim(fn):
     @functools.wraps(fn)
-    def wrapper(x: variable.ArrayOrScalar,
+    def wrapper(x: np.ndarray,
                 dim: Union[int, Sequence[int], None] = None,
                 keepdim: bool = False):
-        return fn(get_data(x), dim, keepdims=keepdim)
+        return fn(x, dim, keepdims=keepdim)
     return wrapper
 
 
 def _resolve_unary(fn):
     @functools.wraps(fn)
-    def wrapper(x: variable.ArrayOrScalar,
+    def wrapper(x: np.ndarray,
                 dim: Union[int, Sequence[int], None] = None):
-        return fn(get_data(x)) if dim is None else fn(get_data(x), dim)
+        return fn(x) if dim is None else fn(x, dim)
     return wrapper
 
 
 def _resolve_binary(fn):
     @functools.wraps(fn)
-    def wrapper(x1: variable.ArrayOrScalar,
-                x2: variable.ArrayOrScalar):
-        return fn(get_data(x1), get_data(x2))
+    def wrapper(x1: np.ndarray,
+                x2: np.ndarray):
+        return fn(x1, x2)
     return wrapper
 
 
@@ -99,8 +93,8 @@ class Numpy(backend.Backend, name="numpy"):
     }
 
     @classmethod
-    def resolve(cls, op, *args, **kwargs):
-        return cls._OPS[op](*args, **kwargs)
+    def resolve(cls, op):
+        return cls._OPS[op]
 
     @classmethod
     def resolve_creation_routine(cls, fn_name):

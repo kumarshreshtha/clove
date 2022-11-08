@@ -75,8 +75,6 @@ class IndexOp(operator.Operator, fn_name="index"):
                                       self._cache.shape,
                                       self._cache.key)
 
-# TODO: need to implement creation routines for this to work.
-
 
 class _IndexBackwardOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
