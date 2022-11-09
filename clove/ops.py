@@ -70,19 +70,19 @@ class IndexOp(operator.Operator, fn_name="index"):
         self._cache.shape = x.shape
         return self.evaluate(x, key)
 
-    def backward(self, grad_out: variable.Variable):
-        return _IndexBackwardOp.apply(grad_out,
-                                      self._cache.shape,
-                                      self._cache.key)
+    def vjp(self, grad_out: variable.Variable):
+        return _IndexvjpOp.apply(grad_out,
+                                 self._cache.shape,
+                                 self._cache.key)
 
 
-class _IndexBackwardOp(operator.Operator):
+class _IndexvjpOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
         out = _creation_routines.zeros(*shape)
         out[key] = x.data
         return out
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return IndexOp.apply(grad_out, self._cache.key)
 
 
@@ -94,7 +94,7 @@ class ExpandOp(operator.Operator, fn_name="expand"):
             resolve_shape_for_expansion(shape, x.shape))
         return self.evaluate(x, shape)
 
-    def backward(self, grad_out):
+    def vjp(self, grad_out):
         return grad_out.sum(dim=self._cache.reduction_dim)
 
 
@@ -125,7 +125,7 @@ class ReshapeOp(operator.Operator, fn_name="squeeze"):
         self._cache.shape = x.shape
         return self.evaluate(x, shape)
 
-    def backward(self, grad_output: variable.Variable):
+    def vjp(self, grad_output: variable.Variable):
         return grad_output.reshape(self._cache.shape)
 
 
@@ -145,7 +145,7 @@ class ReductionOp(operator.Operator):
         self._cache.shape = x.shape
         return self.evaluate(x, dim, keepdim)
 
-    def backward(self, grad_out) -> variable.Variable:
+    def vjp(self, grad_out) -> variable.Variable:
         if not self._cache.keepdim:
             expanded_shape = expand_dims(self._cache.shape, self._cache.dim)
             grad_out = grad_out.reshape(expanded_shape)
@@ -153,8 +153,8 @@ class ReductionOp(operator.Operator):
 
 
 class SumOp(ReductionOp, fn_name="sum"):
-    def backward(self, grad_out):
-        return super().backward(grad_out).expand(self._cache.shape)
+    def vjp(self, grad_out):
+        return super().vjp(grad_out).expand(self._cache.shape)
 
 
 class MeanOp(ReductionOp, fn_name="mean"):
@@ -166,8 +166,8 @@ class MeanOp(ReductionOp, fn_name="mean"):
         self._cache.div = 1 / math.prod([x.shape[d] for d in dim])
         return super().forward(x, dim, keepdim)
 
-    def backward(self, grad_out):
-        grad_out = super().backward(grad_out) * self._cache.div
+    def vjp(self, grad_out):
+        grad_out = super().vjp(grad_out) * self._cache.div
         return grad_out.expand(self._cache.shape)
 
 
@@ -182,8 +182,8 @@ class ProdOp(ReductionOp, fn_name="prod"):
         self._cache.out = out
         return out
 
-    def backward(self, grad_out):
-        grad_out = super().backward(grad_out)
+    def vjp(self, grad_out):
+        grad_out = super().vjp(grad_out)
         out = self._cache.out
         x = self._cache.x
         if not self._cache.keepdim:
@@ -197,7 +197,7 @@ class CloneOp(operator.Operator, fn_name="clone"):
     def forward(self, x: variable.ArrayOrScalar) -> variable.Variable:
         return self.evaluate(x)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return grad_out
 
 
@@ -208,7 +208,7 @@ class TransposeOp(operator.Operator, fn_name="transpose", symbol="T"):
         self._cache.d1 = dim_1
         return self.evaluate(x, dim_0, dim_1)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return grad_out.transpose(self._cache.d1, self._cache.d0)
 
 
@@ -219,7 +219,7 @@ class PermuteOp(operator.Operator, fn_name="permute"):
             self._cache.rev_dim = sorted(range(len(dim)), key=dim.__getitem__)
         return self.evaluate(x, dim)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return grad_out.permute(self._cache.rev_dim)
 
 
@@ -247,7 +247,7 @@ class BinaryOp(operator.Operator):
 
 
 class AddOp(BinaryOp, fn_name="add", symbol="+"):
-    def backward(self, grad_out: Optional[variable.ArrayOrScalar]):
+    def vjp(self, grad_out: Optional[variable.ArrayOrScalar]):
         return self.reduce_grad(grad_out, grad_out)
 
 
@@ -257,7 +257,7 @@ class MulOp(BinaryOp, fn_name="multiply", symbol="<&times;>"):
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
         return super().forward(x1, x2)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
         x1_grad = x2 * grad_out if x2 is not None else None
         x2_grad = x1 * grad_out if x1 is not None else None
@@ -265,7 +265,7 @@ class MulOp(BinaryOp, fn_name="multiply", symbol="<&times;>"):
 
 
 class MinusOp(BinaryOp, fn_name="subtract", symbol="-"):
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return self.reduce_grad(grad_out, -grad_out)
 
 
@@ -277,7 +277,7 @@ class DivOp(BinaryOp, fn_name="divide"):
                           else None)
         return super().forward(x1, x2)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
         grad_x1 = grad_x2 = None
         if x2 is not None:
@@ -296,7 +296,7 @@ class PowOp(BinaryOp, fn_name="power", symbol="**"):
         self._cache.out = out if operator.prop_grad(x2) else None
         return out
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         x1, x2, out = self._cache.x1, self._cache.x2, self._cache.out
         x1_grad = x2_grad = None
         if x2 is not None:
@@ -312,7 +312,7 @@ class MatmulOp(operator.Operator, fn_name="matmul", symbol="@"):
         self._cache.x1 = x1 if operator.prop_grad(x2) else None
         return self.evaluate(x1, x2)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         x1, x2 = self._cache.x1, self._cache.x2
         grad_x1 = grad_out @ x2.T if x2 is not None else None
         grad_x2 = x1.T @ grad_out if x1 is not None else None
@@ -325,7 +325,7 @@ class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
         self._cache.out = out
         return out
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return -grad_out * self._cache.out**2
 
 
@@ -333,7 +333,7 @@ class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
     def forward(self, x: variable.ArrayOrScalar):
         return self.evaluate(x)
 
-    def backward(self, grad_out):
+    def vjp(self, grad_out):
         return -grad_out
 
 
@@ -343,7 +343,7 @@ class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
         self._cache.out = out
         return out
 
-    def backward(self, grad_out):
+    def vjp(self, grad_out):
         return grad_out * self._cache.out
 
 
@@ -352,7 +352,7 @@ class LogOp(operator.Operator, fn_name="log", symbol="ln"):
         self._cache.x = x
         return self.evaluate(x)
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return grad_out * self._cache.x.reciprocal()
 
 
@@ -362,7 +362,7 @@ class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
         self._cache.out = out
         return out
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         out = self._cache.out
         return grad_out * out * (1 - out)
 
@@ -373,5 +373,5 @@ class TanhOp(operator.Operator, fn_name="tanh", symbol="tanh"):
         self._cache.out = out
         return out
 
-    def backward(self, grad_out: variable.Variable):
+    def vjp(self, grad_out: variable.Variable):
         return grad_out * (1 - self._cache.out**2)

@@ -9,9 +9,6 @@ from clove import ops
 from clove import variable
 
 
-# TODO: move data abstraction to operator function so direct function
-# associations can be created whenever possible.
-
 # TODO: need to refactor resolution into groups, manipulation routines,
 # index routines, unary on dim, unary, binary etc.
 

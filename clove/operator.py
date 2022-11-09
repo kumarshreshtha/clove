@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import itertools
 from typing import Optional, Sequence
 import weakref
 
@@ -41,9 +40,9 @@ class Operator:
             def __getattr__(self, name):
                 if name not in self:
                     raise RuntimeError(
-                        f"called backward on {cls_name} after"
+                        f"called vjp on {cls_name} after"
                         " releasing the saved tensors. In order to call"
-                        " backward multiple times please set "
+                        " vjp multiple times please set "
                         "`retain_graph=True`.")
                 return self[name]
 
@@ -86,9 +85,14 @@ class Operator:
             f"forward pass for {self.__class__.__name__} has not been"
             " implemented")
 
-    def backward(self, grad_out: variable.Variable):
+    def jvp(self, grad_in: variable.Variable):
         raise NotImplementedError(
-            f"backward pass for {self.__class__.__name__} has not been"
+            f"jvp pass for {self.__class__.__name__} has not been"
+            " implemented")
+
+    def vjp(self, grad_out: variable.Variable):
+        raise NotImplementedError(
+            f"vjp pass for {self.__class__.__name__} has not been"
             " implemented")
 
     @classmethod
@@ -114,7 +118,7 @@ class Operator:
         op = cls(children=children if requires_grad else [],
                  requires_grad=requires_grad,
                  backend=backend)
-        # ops have their own backward. therefore the operations they do within
+        # ops have their own vjp. therefore the operations they do within
         #  their forward should be detached from the computation graph.
         with grad_mode.set_grad_enabled(False):
             out = op.forward(*args, **kwargs)
