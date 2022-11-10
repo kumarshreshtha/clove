@@ -71,12 +71,12 @@ class IndexOp(operator.Operator, fn_name="index"):
         return self.evaluate(x, key)
 
     def vjp(self, grad_out: variable.Variable):
-        return _IndexvjpOp.apply(grad_out,
+        return _IndexBackwardOp.apply(grad_out,
                                  self._cache.shape,
                                  self._cache.key)
 
 
-class _IndexvjpOp(operator.Operator):
+class _IndexBackwardOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
         out = _creation_routines.zeros(*shape)
         out[key] = x.data
@@ -199,6 +199,9 @@ class CloneOp(operator.Operator, fn_name="clone"):
 
     def vjp(self, grad_out: variable.Variable):
         return grad_out
+    
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in
 
 
 class TransposeOp(operator.Operator, fn_name="transpose", symbol="T"):
@@ -210,6 +213,9 @@ class TransposeOp(operator.Operator, fn_name="transpose", symbol="T"):
 
     def vjp(self, grad_out: variable.Variable):
         return grad_out.transpose(self._cache.d1, self._cache.d0)
+
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in.transpose(self._cache.d1, self._cache.d0)
 
 
 class PermuteOp(operator.Operator, fn_name="permute"):
