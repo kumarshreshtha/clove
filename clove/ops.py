@@ -72,8 +72,8 @@ class IndexOp(operator.Operator, fn_name="index"):
 
     def vjp(self, grad_out: variable.Variable):
         return _IndexBackwardOp.apply(grad_out,
-                                 self._cache.shape,
-                                 self._cache.key)
+                                      self._cache.shape,
+                                      self._cache.key)
 
 
 class _IndexBackwardOp(operator.Operator):
@@ -199,7 +199,7 @@ class CloneOp(operator.Operator, fn_name="clone"):
 
     def vjp(self, grad_out: variable.Variable):
         return grad_out
-    
+
     def jvp(self, grad_in: variable.Variable):
         return grad_in
 
@@ -339,8 +339,11 @@ class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
     def forward(self, x: variable.ArrayOrScalar):
         return self.evaluate(x)
 
-    def vjp(self, grad_out):
+    def vjp(self, grad_out: variable.Variable):
         return -grad_out
+
+    def jvp(self, grad_in: variable.Variable):
+        return -grad_in
 
 
 class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
@@ -352,6 +355,9 @@ class ExpOp(operator.Operator, fn_name="exp", symbol="exp"):
     def vjp(self, grad_out):
         return grad_out * self._cache.out
 
+    def jvp(self, grad_in):
+        return grad_in * self._cache.out
+
 
 class LogOp(operator.Operator, fn_name="log", symbol="ln"):
     def forward(self, x: variable.ArrayOrScalar):
@@ -360,6 +366,9 @@ class LogOp(operator.Operator, fn_name="log", symbol="ln"):
 
     def vjp(self, grad_out: variable.Variable):
         return grad_out * self._cache.x.reciprocal()
+
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in * self._cache.x.reciprocal()
 
 
 class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
