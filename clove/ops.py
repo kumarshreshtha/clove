@@ -334,6 +334,10 @@ class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
     def vjp(self, grad_out: variable.Variable):
         return -grad_out * self._cache.out**2
 
+    def vjp(self, grad_in: variable.Variable):
+        return -grad_in * self._cache.out**2
+
+
 
 class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
     def forward(self, x: variable.ArrayOrScalar):
