@@ -385,6 +385,9 @@ class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
         out = self._cache.out
         return grad_out * out * (1 - out)
 
+    def jvp(self, grad_in: variable.Variable):
+        out = self._cache.out
+        return grad_in * out * (1 - out)
 
 class TanhOp(operator.Operator, fn_name="tanh", symbol="tanh"):
     def forward(self, x: variable.ArrayOrScalar):

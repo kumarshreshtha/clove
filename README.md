@@ -53,4 +53,3 @@ sigmoid_grad = clove.grad(sigmoid)
 
 print(sigmoid_grad(2.0))
 ```
-
