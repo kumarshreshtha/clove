@@ -334,9 +334,8 @@ class ReciprocalOp(operator.Operator, fn_name="reciprocal"):
     def vjp(self, grad_out: variable.Variable):
         return -grad_out * self._cache.out**2
 
-    def vjp(self, grad_in: variable.Variable):
+    def jvp(self, grad_in: variable.Variable):
         return -grad_in * self._cache.out**2
-
 
 
 class NegOp(operator.Operator, fn_name="negative", symbol="-1*"):
@@ -389,6 +388,7 @@ class SigmoidOp(operator.Operator, fn_name="sigmoid", symbol="<&sigma;>"):
         out = self._cache.out
         return grad_in * out * (1 - out)
 
+
 class TanhOp(operator.Operator, fn_name="tanh", symbol="tanh"):
     def forward(self, x: variable.ArrayOrScalar):
         out = self.evaluate(x)
@@ -397,3 +397,6 @@ class TanhOp(operator.Operator, fn_name="tanh", symbol="tanh"):
 
     def vjp(self, grad_out: variable.Variable):
         return grad_out * (1 - self._cache.out**2)
+
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in * (1 - self._cache.out**2)
