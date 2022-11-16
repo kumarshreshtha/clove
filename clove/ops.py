@@ -85,6 +85,12 @@ class _IndexBackwardOp(operator.Operator):
     def vjp(self, grad_out: variable.Variable):
         return IndexOp.apply(grad_out, self._cache.key)
 
+# TODO: shape ops need a different cacheing. either create a different
+# cache or a way to toggle caches.
+# but we don't need cache for forward, so it should be a dispensible cache
+# that can be released immediately. should we call jvp as we do the
+# forward?
+
 
 class ExpandOp(operator.Operator, fn_name="expand"):
     def forward(self,
@@ -96,6 +102,9 @@ class ExpandOp(operator.Operator, fn_name="expand"):
 
     def vjp(self, grad_out):
         return grad_out.sum(dim=self._cache.reduction_dim)
+
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in.expand(self._cache.shape)
 
 
 def resolve_shape(x, shape: Sequence[int]):
@@ -122,11 +131,14 @@ class ReshapeOp(operator.Operator, fn_name="squeeze"):
                 x: variable.Variable,
                 shape: Tuple[int, ...]):
         shape = resolve_shape(x, shape)
-        self._cache.shape = x.shape
+        self._cache.og_shape = x.shape
         return self.evaluate(x, shape)
 
     def vjp(self, grad_output: variable.Variable):
-        return grad_output.reshape(self._cache.shape)
+        return grad_output.reshape(self._cache.og_shape)
+
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in.reshape(self._cache.shape)
 
 
 def expand_dims(shape, dims):
