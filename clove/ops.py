@@ -75,6 +75,9 @@ class IndexOp(operator.Operator, fn_name="index"):
                                       self._cache.shape,
                                       self._cache.key)
 
+    def jvp(self, grad_in: variable.Variable):
+        return IndexOp.apply(grad_in, self._cache.key)
+
 
 class _IndexBackwardOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
