@@ -31,16 +31,43 @@ Clove has inbuilt `graphviz` extensions to visualize your computation graphs as 
 ```py
 import clove
 
-a = clove.ones(3,1,1 requires_grad = True, name='a')
-b = clove.randn(3,1,1 requires_grad = True, name='b')
+a = clove.ones(2,2, requires_grad = True, name='a')
+b = clove.randn(2,2, requires_grad = True, name='b')
 c = a / b
 d = a * b
 e = clove.exp(d)
-f = c.log()
+f = c.tanh()
 g = e + f
 h = g.sum()
 clove.make_dot(h)
 ```
+
+![graph](./images/clove_graphviz.png)
+
+You can also visualize intermediate outputs and cached values for backward as you move along in your computation:
+
+```py
+a = clove.array([23.], requires_grad=True, name='a')
+b = clove.array([32.], requires_grad=True, name='b')
+c = a * b
+d = c.log()
+clove.make_dot(d,show_intermediate_outs=True, show_saved=True)
+```
+
+![graph2](./image/clove_inter_cache.png)
+
+And see the value of computed gradients on backward:
+
+```py
+d.backward()
+clove.make_dot(d, show_saved=True, show_grads=True)
+```
+
+![graph3](./image/clove_backward.png)
+
+
+Notice the saved values are gone, as performing the backward cleared the cache.
+
 
 Like JAX, grads of functions can be taken just as easily:
 
