@@ -66,6 +66,7 @@ class Numpy(backend.Backend, name="numpy"):
             ops.MeanOp: _resolve_unary(np.mean),
             ops.MulOp: _resolve_binary(np.multiply),
             ops.DivOp: _resolve_binary(np.divide),
+            ops.ReciprocalOp: _resolve_unary(np.reciprocal),
             ops.NegOp: _resolve_unary(np.negative),
             ops.PowOp: _resolve_binary(np.power),
             ops.SigmoidOp: sigmoid,
@@ -84,8 +85,8 @@ class Numpy(backend.Backend, name="numpy"):
         'ones': _create_from_shape(np.ones),
         'zeros': _create_from_shape(np.zeros),
         'array': np.array,
-        'rand': _create_from_shape(np.random.rand),
-        'randn': _create_from_shape(np.random.randn),
+        'rand': np.random.rand,
+        'randn': np.random.randn,
         'randint': np.random.randint
     }
 

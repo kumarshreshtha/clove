@@ -135,7 +135,7 @@ def _autodiff(ordered_ops: List[operator.Operator],
         grad_map[output] = (grad_output if grad_map[output] is None
                             else grad_map[output] + grad_output)
     if op.next_ops:
-        grads = op.backward(grad_output)
+        grads = op.vjp(grad_output)
         grads = (grads,) if isinstance(grads, variable.Variable) else grads
         for child, grad in zip(op.next_ops, grads):
             if child is not None:

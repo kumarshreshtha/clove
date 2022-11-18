@@ -83,6 +83,7 @@ class _IndexBackwardOp(operator.Operator):
     def forward(self, x: variable.Variable, shape, key):
         out = _creation_routines.zeros(*shape)
         out[key] = x.data
+        self._cache.key = key
         return out
 
     def vjp(self, grad_out: variable.Variable):
@@ -272,7 +273,7 @@ class AddOp(BinaryOp, fn_name="add", symbol="+"):
         return self.reduce_grad(grad_out, grad_out)
 
 
-class MulOp(BinaryOp, fn_name="multiply", symbol="<&times;>"):
+class MulOp(BinaryOp, fn_name="multiply", symbol="*"):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
         self._cache.x2 = x2 if operator.prop_grad(x1) else None
         self._cache.x1 = x1 if operator.prop_grad(x2) else None

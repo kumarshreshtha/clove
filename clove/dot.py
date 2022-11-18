@@ -23,19 +23,32 @@ OP_CACHE = dict(NODE_ATTR, shape="box", fillcolor="orange")
 LEAF = dict(NODE_ATTR, shape="box", fillcolor="lightblue")
 HIDDEN = dict(NODE_ATTR, shape="box", fillcolor="lightpink")
 OUT = dict(NODE_ATTR, shape="box", fillcolor="darkolivegreen1")
+MAX_DATA_VIEW_NUMEL = 1
 
 
 def id_repr(data):
     return str(id(data))
 
 
-def make_data_node(dot, data: variable.Variable,
-                   is_leaf: bool, show_grad: bool):
+def get_data_repr(data: variable.Variable):
+    if (not isinstance(data, variable.Variable) or
+            data.numel <= MAX_DATA_VIEW_NUMEL):
+        return str(data)
+    return (f"Variable(shape={data.shape}, "
+            f"requires_grad={data.requires_grad})")
+
+
+def make_data_node(dot,
+                   data: variable.Variable,
+                   is_leaf: bool,
+                   show_grad: bool):
     if not show_grad or data.grad is None:
-        dot.node(id_repr(data), str(data), **(LEAF if is_leaf else HIDDEN))
+        dot.node(id_repr(data),
+                 get_data_repr(data),
+                 **(LEAF if is_leaf else HIDDEN))
         return
-    data_repr = str(data)
-    grad_repr = str(data.grad)
+    data_repr = get_data_repr(data)
+    grad_repr = get_data_repr(data.grad)
     width = max(len(data_repr), len(grad_repr))
     n_repr = f"data : {data_repr.rjust(width)}\ngrad : {grad_repr.rjust(width)}"
     dot.node(id_repr(data), n_repr, **(LEAF if is_leaf else HIDDEN))
@@ -48,14 +61,14 @@ def add_cache_to_op(dot, op: operator.Operator):
     max_key_len = len(max(cache.keys(), key=lambda x: len(x)))
     max_val_len = len(str(max(cache.values(), key=lambda x: len(str(x)))))
     cache_repr = "\n".join(
-        [f"{k.ljust(max_key_len)} : {str(v).rjust(max_val_len)}"
+        [f"{k.ljust(max_key_len)} : {get_data_repr(v).rjust(max_val_len)}"
          for k, v in cache.items()])
     dot.node(id_repr(cache), cache_repr, **OP_CACHE)
     dot.edge(id_repr(op), id_repr(op._cache), dir="none")
 
 
 def make_out_node(dot, out: variable.Variable):
-    dot.node(id_repr(out), str(out), **OUT)
+    dot.node(id_repr(out), get_data_repr(out), **OUT)
 
 
 def make_op_node(dot, op: operator.Operator):

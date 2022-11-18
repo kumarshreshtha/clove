@@ -90,6 +90,8 @@ class Variable:
                                " " * indentation,
                                lambda line: cls_name not in line)
 
+    __str__ = __repr__
+
     # TODO: add resolve device.
     @property
     def shape(self):
@@ -116,7 +118,7 @@ class Variable:
     __neg__ = binding_utils.make_method("__neg__", ops.NegOp)
     __pow__ = binding_utils.make_method("__pow__", ops.PowOp)
     __matmul__ = binding_utils.make_method("__matmul__", ops.MatmulOp)
-    reciprocal = binding_utils.make_method("__matmul__", ops.ReciprocalOp)
+    reciprocal = binding_utils.make_method("reciprocal", ops.ReciprocalOp)
     sigmoid = binding_utils.make_method("sigmoid", ops.SigmoidOp)
     exp = binding_utils.make_method("exp", ops.ExpOp)
     log = binding_utils.make_method("log", ops.LogOp)
