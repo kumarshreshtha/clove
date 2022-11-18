@@ -42,7 +42,7 @@ h = g.sum()
 clove.make_dot(h)
 ```
 
-<img src = "./images/clove_graphviz.png" width=300>
+<img src = "./images/clove_graphviz.png" width=500>
 
 You can also visualize intermediate outputs and cached values for backward as you move along in your computation:
 
@@ -54,7 +54,7 @@ d = c.log()
 clove.make_dot(d,show_intermediate_outs=True, show_saved=True)
 ```
 
-<img src = "./images/clove_inter_cache.png" width=300>
+<img src = "./images/clove_inter_cache.png" width=500>
 
 And see the value of computed gradients on backward:
 
@@ -63,7 +63,7 @@ d.backward()
 clove.make_dot(d, show_saved=True, show_grads=True)
 ```
 
-<img src = "./images/clove_backward.png" width=300>
+<img src = "./images/clove_backward.png" width=500>
 
 
 Notice the saved values are gone, as performing the backward cleared the cache.
