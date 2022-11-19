@@ -244,6 +244,9 @@ class PermuteOp(operator.Operator, fn_name="permute"):
     def vjp(self, grad_out: variable.Variable):
         return grad_out.permute(self._cache.rev_dim)
 
+    def jvp(self, grad_in: variable.Variable):
+        return grad_in.permute(self._cache.dim)
+
 
 class BinaryOp(operator.Operator):
     def forward(self, x1: variable.ArrayOrScalar, x2: variable.ArrayOrScalar):
