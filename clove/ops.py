@@ -89,6 +89,11 @@ class _IndexBackwardOp(operator.Operator):
     def vjp(self, grad_out: variable.Variable):
         return IndexOp.apply(grad_out, self._cache.key)
 
+    def jvp(self, grad_in: variable.Variable):
+        return _IndexBackwardOp.apply(grad_in,
+                                      self._cache.shape,
+                                      self._cache.key)
+
 # TODO: shape ops need a different cacheing. either create a different
 # cache or a way to toggle caches.
 # but we don't need cache for forward, so it should be a dispensible cache
