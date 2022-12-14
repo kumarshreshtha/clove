@@ -4,7 +4,7 @@ Clove is an automatic differentiation engine with a pytorch autograd like api an
 
 Clove also implements a jax like functional differentiation module to take derivatives of arbitrary python functions.
 
-\* *forward and mixed mode are currently under development*
+<font size="1.5"> * forward and mixed mode are currently under development </font>
 
 Computations can be performed with specific backends :
 
