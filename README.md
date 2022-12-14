@@ -1,8 +1,10 @@
 # Clove
 
-Clove is an automatic differentiation engine with a pytorch autograd like api and the ability to toggle numerical computation backends (currently implements `numpy` and `cupy`). It supports higher order backward-mode (vjp), forward-mode (jvp) and mixed mode autodiff.
+Clove is an automatic differentiation engine with a pytorch autograd like api and the ability to toggle numerical computation backends. It supports higher order backward-mode (vjp), forward-mode (jvp) and mixed mode autodiff*.
 
 Clove also implements a jax like functional differentiation module to take derivatives of arbitrary python functions.
+
+\* *forward and mixed mode are currently under development*
 
 Computations can be performed with specific backends :
 
@@ -24,7 +26,7 @@ y = clove.sum(x)
 y.backward()
 ```
 
-the default backend is `'numpy'` and can be toggled using `clove.set_backend('backend_name')`
+the default backend is `'numpy'` and can be toggled using `clove.set_backend('backend_name')`.
 
 Clove has inbuilt `graphviz` extensions to visualize your computation graphs as you build them:
 
@@ -44,7 +46,7 @@ clove.make_dot(h)
 
 <img src = "./images/clove_graphviz.png" width=500>
 
-You can also visualize intermediate outputs and cached values for backward as you move along in your computation:
+You can also visualize intermediate outputs and cached values as you move along in your computation, which make it a great visual learning tool for:
 
 ```py
 a = clove.array([23.], requires_grad=True, name='a')
