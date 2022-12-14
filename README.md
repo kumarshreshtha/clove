@@ -46,7 +46,7 @@ clove.make_dot(h)
 
 <img src = "./images/clove_graphviz.png" width=500>
 
-You can also visualize intermediate outputs and cached values as you move along in your computation, which make it a great visual learning tool for:
+You can also visualize intermediate outputs and cached values as you move along in your computation, which make it a great visual learning tool for understanding how autograd engines work:
 
 ```py
 a = clove.array([23.], requires_grad=True, name='a')
