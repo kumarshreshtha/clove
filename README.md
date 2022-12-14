@@ -1,10 +1,10 @@
 # Clove
 
-Clove is an automatic differentiation engine with a pytorch autograd like api and the ability to toggle numerical computation backends. It supports higher order backward-mode (vjp), forward-mode (jvp) and mixed mode autodiff[^1].
+Clove is an automatic differentiation engine with a pytorch autograd like api and the ability to toggle numerical computation backends. It supports higher order backward-mode (vjp), forward-mode (jvp) and mixed mode autodiff[^*].
 
 Clove also implements a jax like functional differentiation module to take derivatives of arbitrary python functions.
 
-[^1]: forward and mixed mode are currently under development </font>
+[^*]: forward and mixed mode are currently under development </font>
 
 Computations can be performed with specific backends :
 
