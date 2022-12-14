@@ -82,3 +82,13 @@ sigmoid_grad = clove.grad(sigmoid)
 
 print(sigmoid_grad(2.0))
 ```
+
+## Adding a new backend
+
+New backends can be added to clove with minimal effort by inherit from the `Backend` abstract base class.
+
+Backends are automatically registered when they inherit from the base class. To declare the namespace
+of the backend and make the operators differentiable you can use the utility functions from binding utils.
+An example of this can be seen for the [numpy](https://github.com/kumarshreshtha/clove/blob/main/clove/backends/numpy.py) backend in the repo.
+
+To make the usage of creation routines easier, clove automatically augments the docstring and signature of the wrapped routines to include arguments expected from the backend and the additional arguments accepted by clove.
